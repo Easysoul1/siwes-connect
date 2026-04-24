@@ -1,0 +1,20 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.router = void 0;
+const express_1 = require("express");
+const auth_routes_1 = require("./auth.routes");
+const coordinator_routes_1 = require("./coordinator.routes");
+const organization_routes_1 = require("./organization.routes");
+const student_routes_1 = require("./student.routes");
+const module_routes_1 = require("./module.routes");
+exports.router = (0, express_1.Router)();
+exports.router.get("/health", (_req, res) => {
+    res.status(200).json({ status: "ok", app: "siwes-connect-api" });
+});
+exports.router.use("/auth", auth_routes_1.authRouter);
+exports.router.use("/students", student_routes_1.studentRouter);
+exports.router.use("/organizations", organization_routes_1.organizationRouter);
+exports.router.use("/coordinator", coordinator_routes_1.coordinatorRouter);
+exports.router.use("/placements", module_routes_1.placementRouter);
+exports.router.use("/notifications", module_routes_1.notificationRouter);
+exports.router.use("/uploads", module_routes_1.uploadRouter);
