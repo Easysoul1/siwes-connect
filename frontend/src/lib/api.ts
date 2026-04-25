@@ -15,7 +15,11 @@ import {
   StudentProfile
 } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api/v1";
+let envApiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
+if (!envApiUrl.endsWith("/api/v1")) {
+  envApiUrl += "/api/v1";
+}
+const API_BASE_URL = envApiUrl;
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
