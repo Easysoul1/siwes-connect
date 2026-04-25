@@ -11,6 +11,17 @@ import {
 
 export const router = Router();
 
+router.get("/", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    app: "siwes-connect-api",
+    version: "v1",
+    endpoints: {
+      health: "/api/v1/health"
+    }
+  });
+});
+
 router.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok", app: "siwes-connect-api" });
 });

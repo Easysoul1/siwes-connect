@@ -8,6 +8,16 @@ const organization_routes_1 = require("./organization.routes");
 const student_routes_1 = require("./student.routes");
 const module_routes_1 = require("./module.routes");
 exports.router = (0, express_1.Router)();
+exports.router.get("/", (_req, res) => {
+    res.status(200).json({
+        status: "ok",
+        app: "siwes-connect-api",
+        version: "v1",
+        endpoints: {
+            health: "/api/v1/health"
+        }
+    });
+});
 exports.router.get("/health", (_req, res) => {
     res.status(200).json({ status: "ok", app: "siwes-connect-api" });
 });
