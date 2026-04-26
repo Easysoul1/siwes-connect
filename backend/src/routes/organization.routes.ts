@@ -2,6 +2,7 @@ import { Router } from "express";
 import { UserRole } from "@prisma/client";
 import { authenticate } from "../middleware/authenticate";
 import { authorize } from "../middleware/authorize";
+import { documentUpload } from "../middleware/upload";
 import {
   confirmPlacement,
   createPlacement,
@@ -25,7 +26,11 @@ organizationRouter.use(authenticate, authorize(UserRole.ORGANIZATION));
 
 organizationRouter.get("/profile", getOrganizationProfile);
 organizationRouter.put("/profile", updateOrganizationProfile);
-organizationRouter.post("/profile/documents", uploadOrganizationDocuments);
+organizationRouter.post(
+  "/profile/documents",
+  documentUpload.single("file"),
+  uploadOrganizationDocuments
+);
 
 organizationRouter.get("/placements", getOrganizationPlacements);
 organizationRouter.post("/placements", createPlacement);

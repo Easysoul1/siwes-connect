@@ -34,9 +34,10 @@ export class MatchingService {
       breakdown.level = studentLevel >= 300 ? 20 : 10;
     }
 
-    if (student.cgpa && student.cgpa >= 4.5) breakdown.cgpa = 10;
-    else if (student.cgpa && student.cgpa >= 3.5) breakdown.cgpa = 6;
-    else if (student.cgpa && student.cgpa > 0) breakdown.cgpa = 3;
+    const cgpa = student.cgpa ? Number(student.cgpa) : null;
+    if (cgpa && cgpa >= 4.5) breakdown.cgpa = 10;
+    else if (cgpa && cgpa >= 3.5) breakdown.cgpa = 6;
+    else if (cgpa && cgpa > 0) breakdown.cgpa = 3;
 
     const matchScore = breakdown.location + breakdown.department + breakdown.level + breakdown.cgpa;
     return { placement, matchScore, breakdown };

@@ -39,7 +39,7 @@ export default function OrganizationRegisterPage() {
           password: form.password,
           companyName: form.companyName
         });
-        setMessage("Organization account created. Await coordinator approval after login.");
+        setMessage("Organization account created. Check your email to verify your account.");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Registration failed");
       }

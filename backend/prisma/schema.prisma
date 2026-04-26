@@ -17,15 +17,11 @@ enum VerificationStatus {
   PENDING
   APPROVED
   REJECTED
-}
-
-enum PlacementStatus {
-  DRAFT
-  ACTIVE
-  CLOSED
+  SUSPENDED
 }
 
 enum ApplicationStatus {
+  DRAFT
   SUBMITTED
   UNDER_REVIEW
   ACCEPTED
@@ -34,33 +30,138 @@ enum ApplicationStatus {
   PLACEMENT_CONFIRMED
 }
 
+enum PlacementStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+  EXPIRED
+  FILLED
+}
+
+enum NotificationType {
+  APPLICATION_SUBMITTED
+  APPLICATION_REVIEWED
+  APPLICATION_ACCEPTED
+  APPLICATION_REJECTED
+  PLACEMENT_POSTED
+  ORGANIZATION_APPROVED
+  ORGANIZATION_REJECTED
+  ANNOUNCEMENT
+  DEADLINE_REMINDER
+  PLACEMENT_CONFIRMED
+}
+
+enum StudyField {
+  COMPUTER_SCIENCE
+  ELECTRICAL_ENGINEERING
+  MECHANICAL_ENGINEERING
+  CIVIL_ENGINEERING
+  CHEMICAL_ENGINEERING
+  ACCOUNTING
+  BUSINESS_ADMINISTRATION
+  MEDICINE
+  PHARMACY
+  AGRICULTURE
+  ARCHITECTURE
+  LAW
+  MASS_COMMUNICATION
+  ECONOMICS
+  MICROBIOLOGY
+  BIOCHEMISTRY
+  STATISTICS
+  MATHEMATICS
+  PHYSICS
+  CHEMISTRY
+  GEOLOGY
+  PETROLEUM_ENGINEERING
+  OTHER
+}
+
+enum NigerianState {
+  ABIA
+  ADAMAWA
+  AKWA_IBOM
+  ANAMBRA
+  BAUCHI
+  BAYELSA
+  BENUE
+  BORNO
+  CROSS_RIVER
+  DELTA
+  EBONYI
+  EDO
+  EKITI
+  ENUGU
+  FCT
+  GOMBE
+  IMO
+  JIGAWA
+  KADUNA
+  KANO
+  KATSINA
+  KEBBI
+  KOGI
+  KWARA
+  LAGOS
+  NASARAWA
+  NIGER
+  OGUN
+  ONDO
+  OSUN
+  OYO
+  PLATEAU
+  RIVERS
+  SOKOTO
+  TARABA
+  YOBE
+  ZAMFARA
+}
+
 model User {
-  id              String          @id @default(cuid())
-  email           String          @unique
-  password        String
-  role            UserRole
-  isEmailVerified Boolean         @default(false)
-  isActive        Boolean         @default(true)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  student         Student?
-  organization    Organization?
-  coordinator     Coordinator?
-  notifications   Notification[]
+  id                 String                   @id @default(cuid())
+  email              String                   @unique
+  password           String
+  role               UserRole
+  isEmailVerified    Boolean                  @default(false)
+  isActive           Boolean                  @default(true)
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  student            Student?
+  organization       Organization?
+  coordinator        Coordinator?
+  notifications      Notification[]
+  refreshTokens      RefreshToken[]
+  passwordResets     PasswordReset[]
+  emailVerifications EmailVerificationToken[]
 }
 
 model Student {
-  id             String        @id @default(cuid())
-  userId         String        @unique
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  firstName      String
-  lastName       String
-  department     String
-  level          String
-  cgpa           Float?
-  currentState   String
-  preferredStates String[]
-  applications Application[]
+  id                String        @id @default(cuid())
+  userId            String        @unique
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institutionId     String?
+  institution       Institution?  @relation(fields: [institutionId], references: [id])
+  firstName         String
+  lastName          String
+  phone             String?
+  profilePhoto      String?
+  dateOfBirth       DateTime?
+  gender            String?
+  matricNumber      String?       @unique
+  department        String
+  faculty           String?
+  studyField        StudyField    @default(OTHER)
+  level             String
+  cgpa              Decimal?      @db.Decimal(3, 2)
+  siwesYear         String?
+  preferredDuration Int?
+  preferredStates   String[]
+  currentState      String
+  currentAddress    String?
+  resumeUrl         String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @default(now()) @updatedAt
+  applications      Application[]
 }
 
 model Organization {
@@ -68,15 +169,51 @@ model Organization {
   userId             String             @unique
   user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   companyName        String
+  slug               String?            @unique
+  description        String?
+  industry           String?
+  companySize        String?
+  website            String?
+  contactPersonName  String?
+  contactPersonTitle String?
+  contactEmail       String?
+  contactPhone       String?
+  state              String?
+  lga                String?
+  address            String?
+  rcNumber           String?
+  itfNumber          String?
   verificationStatus VerificationStatus @default(PENDING)
+  verifiedAt         DateTime?
+  verifiedBy         String?
+  rejectionReason    String?
+  cacDocumentUrl     String?
+  itfDocumentUrl     String?
+  logoUrl            String?
+  fields             StudyField[]       @default([])
+  totalSlotsHosted   Int                @default(0)
+  rating             Decimal?           @db.Decimal(2, 1)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @default(now()) @updatedAt
   placements         Placement[]
+  applications       Application[]
 }
 
 model Coordinator {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fullName  String
+  id            String       @id @default(cuid())
+  userId        String       @unique
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institutionId String?
+  institution   Institution? @relation(fields: [institutionId], references: [id])
+  fullName      String
+  firstName     String?
+  lastName      String?
+  phone         String?
+  title         String?
+  department    String?
+  staffId       String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @default(now()) @updatedAt
 }
 
 model Placement {
@@ -85,34 +222,136 @@ model Placement {
   organization        Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   title               String
   description         String
+  responsibilities    String[]        @default([])
+  requirements        String[]        @default([])
   requiredDepartment  String?
+  requiredFields      StudyField[]    @default([])
+  minimumLevel        String?
+  minimumCGPA         Decimal?        @db.Decimal(3, 2)
   state               String
+  lga                 String?
   isRemote            Boolean         @default(false)
   totalSlots          Int
   filledSlots         Int             @default(0)
+  durationWeeks       Int?
+  startDate           DateTime?
+  endDate             DateTime?
   applicationDeadline DateTime
+  stipendAmount       Decimal?        @db.Decimal(10, 2)
+  stipendCurrency     String          @default("NGN")
+  hasStipend          Boolean         @default(false)
+  selectionProcess    String?
+  benefits            String[]        @default([])
   status              PlacementStatus @default(DRAFT)
   createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @default(now()) @updatedAt
   applications        Application[]
 }
 
 model Application {
-  id             String            @id @default(cuid())
-  studentId      String
-  student        Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  placementId    String
-  placement      Placement         @relation(fields: [placementId], references: [id], onDelete: Cascade)
-  status         ApplicationStatus @default(SUBMITTED)
-  createdAt      DateTime          @default(now())
+  id                  String            @id @default(cuid())
+  studentId           String
+  student             Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  placementId         String
+  placement           Placement         @relation(fields: [placementId], references: [id], onDelete: Cascade)
+  organizationId      String?
+  organization        Organization?     @relation(fields: [organizationId], references: [id])
+  coverLetter         String?
+  resumeUrl           String?
+  additionalDocs      String[]          @default([])
+  status              ApplicationStatus @default(SUBMITTED)
+  statusHistory       Json              @default("[]")
+  institutionApproved Boolean           @default(false)
+  institutionNote     String?
+  orgNote             String?
+  interviewDate       DateTime?
+  confirmedAt         DateTime?
+  placementStartDate  DateTime?
+  supervisorName      String?
+  supervisorContact   String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @default(now()) @updatedAt
+
   @@unique([studentId, placementId])
 }
 
 model Notification {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType @default(ANNOUNCEMENT)
   title     String
   message   String
-  isRead    Boolean  @default(false)
+  data      Json?
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Institution {
+  id           String        @id @default(cuid())
+  name         String
+  shortName    String
+  state        NigerianState
+  address      String
+  website      String?
+  logoUrl      String?
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @default(now()) @updatedAt
+  students     Student[]
+  coordinators Coordinator[]
+}
+
+model Announcement {
+  id             String   @id @default(cuid())
+  institutionId  String?
+  createdBy      String
+  title          String
+  content        String
+  targetAudience String[] @default([])
+  isPinned       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
 }

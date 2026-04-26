@@ -1,9 +1,12 @@
 import { NextFunction, Request, Response } from "express";
-import { ApplicationStatus, PlacementStatus } from "@prisma/client";
+import { ApplicationStatus, NotificationType, PlacementStatus } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../config/database";
 import { AppError } from "../utils/errors";
 import { MatchingService } from "../services/matching.service";
+import { UploadService } from "../services/upload.service";
+import { NotificationService } from "../services/notification.service";
+import { parsePagination } from "../utils/pagination";
 
 const updateProfileSchema = z.object({
   firstName: z.string().trim().min(2).optional(),
@@ -20,7 +23,10 @@ const updatePreferencesSchema = z.object({
 });
 
 const applySchema = z.object({
-  placementId: z.string().min(1)
+  placementId: z.string().min(1),
+  coverLetter: z.string().trim().min(10).optional(),
+  resumeUrl: z.string().url().optional(),
+  additionalDocs: z.array(z.string().url()).optional()
 });
 
 async function getStudentByUserId(userId: string) {
@@ -80,11 +86,29 @@ export async function updatePreferences(req: Request, res: Response, next: NextF
   }
 }
 
-export async function uploadResume(_req: Request, res: Response) {
-  res.status(202).json({
-    message: "Resume upload endpoint is ready for Cloudinary integration",
-    data: null
-  });
+export async function uploadResume(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) throw new AppError(401, "Unauthorized");
+    if (!req.file) throw new AppError(400, "No file uploaded");
+
+    const student = await getStudentByUserId(req.user.id);
+    const uploaded = await UploadService.uploadBuffer(req.file.buffer, {
+      folder: "siwes/resumes",
+      resourceType: "raw"
+    });
+
+    const updated = await prisma.student.update({
+      where: { id: student.id },
+      data: { resumeUrl: uploaded.url }
+    });
+
+    res.status(201).json({
+      message: "Resume uploaded successfully",
+      data: { resumeUrl: updated.resumeUrl }
+    });
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function getMatchedPlacements(req: Request, res: Response, next: NextFunction) {
@@ -150,7 +174,7 @@ export async function getRecommendedPlacements(req: Request, res: Response, next
 export async function submitApplication(req: Request, res: Response, next: NextFunction) {
   try {
     if (!req.user) throw new AppError(401, "Unauthorized");
-    const { placementId } = applySchema.parse(req.body);
+    const { placementId, coverLetter, resumeUrl, additionalDocs } = applySchema.parse(req.body);
 
     const student = await getStudentByUserId(req.user.id);
 
@@ -181,13 +205,22 @@ export async function submitApplication(req: Request, res: Response, next: NextF
       existing && existing.status === ApplicationStatus.WITHDRAWN
         ? await prisma.application.update({
             where: { id: existing.id },
-            data: { status: ApplicationStatus.SUBMITTED }
+            data: {
+              status: ApplicationStatus.SUBMITTED,
+              coverLetter,
+              resumeUrl,
+              additionalDocs: additionalDocs ?? []
+            }
           })
         : await prisma.application.create({
             data: {
               studentId: student.id,
               placementId: placement.id,
-              status: ApplicationStatus.SUBMITTED
+              organizationId: placement.organizationId,
+              status: ApplicationStatus.SUBMITTED,
+              coverLetter,
+              resumeUrl,
+              additionalDocs: additionalDocs ?? []
             }
           });
 
@@ -196,12 +229,12 @@ export async function submitApplication(req: Request, res: Response, next: NextF
       select: { userId: true }
     });
     if (organization) {
-      await prisma.notification.create({
-        data: {
-          userId: organization.userId,
-          title: "New Application",
-          message: `A student applied for ${placement.title}`
-        }
+      await NotificationService.create({
+        userId: organization.userId,
+        type: NotificationType.APPLICATION_SUBMITTED,
+        title: "New Application",
+        message: `A student applied for ${placement.title}`,
+        data: { placementId: placement.id }
       });
     }
 
@@ -215,20 +248,35 @@ export async function getMyApplications(req: Request, res: Response, next: NextF
   try {
     if (!req.user) throw new AppError(401, "Unauthorized");
     const student = await getStudentByUserId(req.user.id);
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>);
 
-    const applications = await prisma.application.findMany({
-      where: { studentId: student.id },
-      include: {
-        placement: {
-          include: {
-            organization: { select: { id: true, companyName: true, verificationStatus: true } }
+    const where = { studentId: student.id };
+    const [applications, total] = await prisma.$transaction([
+      prisma.application.findMany({
+        where,
+        include: {
+          placement: {
+            include: {
+              organization: { select: { id: true, companyName: true, verificationStatus: true } }
+            }
           }
-        }
-      },
-      orderBy: { createdAt: "desc" }
-    });
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit
+      }),
+      prisma.application.count({ where })
+    ]);
 
-    res.json({ data: applications });
+    res.json({
+      data: applications,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit))
+      }
+    });
   } catch (error) {
     next(error);
   }

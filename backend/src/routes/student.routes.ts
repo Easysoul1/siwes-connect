@@ -2,6 +2,7 @@ import { Router } from "express";
 import { UserRole } from "@prisma/client";
 import { authenticate } from "../middleware/authenticate";
 import { authorize } from "../middleware/authorize";
+import { resumeUpload } from "../middleware/upload";
 import {
   getApplicationById,
   getDashboardStats,
@@ -23,7 +24,7 @@ studentRouter.use(authenticate, authorize(UserRole.STUDENT));
 studentRouter.get("/profile", getProfile);
 studentRouter.put("/profile", updateProfile);
 studentRouter.put("/profile/preferences", updatePreferences);
-studentRouter.post("/profile/resume", uploadResume);
+studentRouter.post("/profile/resume", resumeUpload.single("file"), uploadResume);
 
 studentRouter.get("/placements", getMatchedPlacements);
 studentRouter.get("/placements/recommended", getRecommendedPlacements);

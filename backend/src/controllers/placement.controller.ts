@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { PlacementStatus } from "@prisma/client";
 import { prisma } from "../config/database";
+import { parsePagination } from "../utils/pagination";
 
 export async function getPlacements(req: Request, res: Response, next: NextFunction) {
   try {
@@ -13,37 +14,50 @@ export async function getPlacements(req: Request, res: Response, next: NextFunct
         ? (req.query.status as PlacementStatus)
         : PlacementStatus.ACTIVE;
 
-    const placements = await prisma.placement.findMany({
-      where: {
-        status,
-        applicationDeadline: { gte: new Date() },
-        ...(state ? { state } : {}),
-        ...(department
-          ? {
-              OR: [
-                { requiredDepartment: null },
-                {
-                  requiredDepartment: {
-                    equals: department,
-                    mode: "insensitive"
-                  }
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>);
+    const where = {
+      status,
+      applicationDeadline: { gte: new Date() },
+      ...(state ? { state } : {}),
+      ...(department
+        ? {
+            OR: [
+              { requiredDepartment: null },
+              {
+                requiredDepartment: {
+                  equals: department,
+                  mode: "insensitive" as const
                 }
-              ]
-            }
-          : {}),
-        ...(remote !== undefined ? { isRemote: remote } : {})
-      },
-      include: {
-        organization: {
-          select: { id: true, companyName: true, verificationStatus: true }
-        }
-      },
-      orderBy: { createdAt: "desc" }
-    });
+              }
+            ]
+          }
+        : {}),
+      ...(remote !== undefined ? { isRemote: remote } : {})
+    };
+
+    const [placements, total] = await prisma.$transaction([
+      prisma.placement.findMany({
+        where,
+        include: {
+          organization: {
+            select: { id: true, companyName: true, verificationStatus: true }
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit
+      }),
+      prisma.placement.count({ where })
+    ]);
 
     res.json({
       data: placements,
-      total: placements.length
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit))
+      }
     });
   } catch (error) {
     next(error);
@@ -67,6 +81,41 @@ export async function getPlacementById(req: Request, res: Response, next: NextFu
     }
 
     res.json({ data: placement });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getPlacementOrganization(req: Request, res: Response, next: NextFunction) {
+  try {
+    const placement = await prisma.placement.findUnique({
+      where: { id: req.params.id },
+      select: { organizationId: true }
+    });
+    if (!placement) {
+      return res.status(404).json({ status: "error", message: "Placement not found" });
+    }
+
+    const organization = await prisma.organization.findUnique({
+      where: { id: placement.organizationId },
+      select: {
+        id: true,
+        companyName: true,
+        description: true,
+        industry: true,
+        website: true,
+        logoUrl: true,
+        verificationStatus: true,
+        state: true,
+        address: true
+      }
+    });
+
+    if (!organization) {
+      return res.status(404).json({ status: "error", message: "Organization not found" });
+    }
+
+    res.json({ data: organization });
   } catch (error) {
     next(error);
   }

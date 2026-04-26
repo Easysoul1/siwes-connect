@@ -16,6 +16,9 @@ const zod_1 = require("zod");
 const database_1 = require("../config/database");
 const errors_1 = require("../utils/errors");
 const matching_service_1 = require("../services/matching.service");
+const upload_service_1 = require("../services/upload.service");
+const notification_service_1 = require("../services/notification.service");
+const pagination_1 = require("../utils/pagination");
 const updateProfileSchema = zod_1.z.object({
     firstName: zod_1.z.string().trim().min(2).optional(),
     lastName: zod_1.z.string().trim().min(2).optional(),
@@ -86,11 +89,29 @@ async function updatePreferences(req, res, next) {
         next(error);
     }
 }
-async function uploadResume(_req, res) {
-    res.status(202).json({
-        message: "Resume upload endpoint is ready for Cloudinary integration",
-        data: null
-    });
+async function uploadResume(req, res, next) {
+    try {
+        if (!req.user)
+            throw new errors_1.AppError(401, "Unauthorized");
+        if (!req.file)
+            throw new errors_1.AppError(400, "No file uploaded");
+        const student = await getStudentByUserId(req.user.id);
+        const uploaded = await upload_service_1.UploadService.uploadBuffer(req.file.buffer, {
+            folder: "siwes/resumes",
+            resourceType: "raw"
+        });
+        const updated = await database_1.prisma.student.update({
+            where: { id: student.id },
+            data: { resumeUrl: uploaded.url }
+        });
+        res.status(201).json({
+            message: "Resume uploaded successfully",
+            data: { resumeUrl: updated.resumeUrl }
+        });
+    }
+    catch (error) {
+        next(error);
+    }
 }
 async function getMatchedPlacements(req, res, next) {
     try {
@@ -183,6 +204,7 @@ async function submitApplication(req, res, next) {
                 data: {
                     studentId: student.id,
                     placementId: placement.id,
+                    organizationId: placement.organizationId,
                     status: client_1.ApplicationStatus.SUBMITTED
                 }
             });
@@ -191,12 +213,12 @@ async function submitApplication(req, res, next) {
             select: { userId: true }
         });
         if (organization) {
-            await database_1.prisma.notification.create({
-                data: {
-                    userId: organization.userId,
-                    title: "New Application",
-                    message: `A student applied for ${placement.title}`
-                }
+            await notification_service_1.NotificationService.create({
+                userId: organization.userId,
+                type: client_1.NotificationType.APPLICATION_SUBMITTED,
+                title: "New Application",
+                message: `A student applied for ${placement.title}`,
+                data: { placementId: placement.id }
             });
         }
         res.status(201).json({ message: "Application submitted", data: application });
@@ -210,18 +232,33 @@ async function getMyApplications(req, res, next) {
         if (!req.user)
             throw new errors_1.AppError(401, "Unauthorized");
         const student = await getStudentByUserId(req.user.id);
-        const applications = await database_1.prisma.application.findMany({
-            where: { studentId: student.id },
-            include: {
-                placement: {
-                    include: {
-                        organization: { select: { id: true, companyName: true, verificationStatus: true } }
+        const { page, limit, skip } = (0, pagination_1.parsePagination)(req.query);
+        const where = { studentId: student.id };
+        const [applications, total] = await database_1.prisma.$transaction([
+            database_1.prisma.application.findMany({
+                where,
+                include: {
+                    placement: {
+                        include: {
+                            organization: { select: { id: true, companyName: true, verificationStatus: true } }
+                        }
                     }
-                }
-            },
-            orderBy: { createdAt: "desc" }
+                },
+                orderBy: { createdAt: "desc" },
+                skip,
+                take: limit
+            }),
+            database_1.prisma.application.count({ where })
+        ]);
+        res.json({
+            data: applications,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.max(1, Math.ceil(total / limit))
+            }
         });
-        res.json({ data: applications });
     }
     catch (error) {
         next(error);

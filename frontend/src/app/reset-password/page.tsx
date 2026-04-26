@@ -1,22 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useTransition } from "react";
+import { resetPassword } from "@/lib/api";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [token] = useState<string | null>(() =>
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("token") : null
+  );
   const [message, setMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!token) {
+      setMessage("Missing reset token.");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setMessage("Password confirmation does not match.");
       return;
     }
 
-    setMessage("Password reset completed in UI flow. Connect backend token flow to activate.");
+    startTransition(async () => {
+      try {
+        const response = await resetPassword(token, password);
+        setMessage(response.message);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Password reset failed.");
+      }
+    });
   }
 
   return (
@@ -50,8 +66,8 @@ export default function ResetPasswordPage() {
               required
             />
           </div>
-          <button className="btn btn-primary" type="submit">
-            Reset Password
+          <button className="btn btn-primary" type="submit" disabled={isPending}>
+            {isPending ? "Resetting..." : "Reset Password"}
           </button>
         </form>
 

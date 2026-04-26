@@ -8,6 +8,7 @@ export default function CoordinatorRegisterPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -17,8 +18,8 @@ export default function CoordinatorRegisterPage() {
 
     startTransition(async () => {
       try {
-        await registerCoordinator({ fullName, email, password });
-        setMessage("Coordinator account created. Please sign in.");
+        await registerCoordinator({ fullName, email, password, inviteCode });
+        setMessage("Coordinator account created. Check your email to verify your account.");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Registration failed");
       }
@@ -61,6 +62,15 @@ export default function CoordinatorRegisterPage() {
               minLength={8}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="label">Coordinator Invite Code</label>
+            <input
+              className="input"
+              value={inviteCode}
+              onChange={(event) => setInviteCode(event.target.value)}
               required
             />
           </div>

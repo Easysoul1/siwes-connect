@@ -1,12 +1,15 @@
 import { Request, Response, Router } from "express";
 import {
+  forgotPassword,
   login,
   logout,
   me,
   refresh,
+  resetPassword,
   registerCoordinator,
   registerOrganization,
-  registerStudent
+  registerStudent,
+  verifyEmail
 } from "../controllers/auth.controller";
 import { authenticate } from "../middleware/authenticate";
 
@@ -28,6 +31,12 @@ authRouter.post("/login", login);
 authRouter.get("/login", methodNotAllowed("POST"));
 authRouter.post("/refresh", refresh);
 authRouter.get("/refresh", methodNotAllowed("POST"));
+authRouter.post("/verify-email", verifyEmail);
+authRouter.get("/verify-email", methodNotAllowed("POST"));
+authRouter.post("/forgot-password", forgotPassword);
+authRouter.get("/forgot-password", methodNotAllowed("POST"));
+authRouter.post("/reset-password", resetPassword);
+authRouter.get("/reset-password", methodNotAllowed("POST"));
 authRouter.post("/logout", authenticate, logout);
 authRouter.get("/logout", methodNotAllowed("POST"));
 authRouter.get("/me", authenticate, me);

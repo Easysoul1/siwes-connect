@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState, useTransition } from "react";
 import {
   getOrganizationProfile,
+  uploadOrganizationDocument,
   updateOrganizationProfile
 } from "@/lib/api";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -12,6 +13,8 @@ export default function OrganizationProfilePage() {
   const [companyName, setCompanyName] = useState("");
   const [verificationStatus, setVerificationStatus] = useState("PENDING");
   const [message, setMessage] = useState<string | null>(null);
+  const [cacFile, setCacFile] = useState<File | null>(null);
+  const [itfFile, setItfFile] = useState<File | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -37,6 +40,12 @@ export default function OrganizationProfilePage() {
     startTransition(async () => {
       try {
         await updateOrganizationProfile(session.accessToken, { companyName });
+        if (cacFile) {
+          await uploadOrganizationDocument(session.accessToken, cacFile, "cac");
+        }
+        if (itfFile) {
+          await uploadOrganizationDocument(session.accessToken, itfFile, "itf");
+        }
         setMessage("Organization profile updated.");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Profile update failed");
@@ -69,11 +78,21 @@ export default function OrganizationProfilePage() {
           <div className="form-grid">
             <div>
               <label className="label">CAC Document</label>
-              <input className="input" placeholder="Upload endpoint ready in backend /uploads/document" />
+              <input
+                className="input"
+                type="file"
+                accept=".pdf,image/png,image/jpeg"
+                onChange={(event) => setCacFile(event.target.files?.[0] ?? null)}
+              />
             </div>
             <div>
               <label className="label">ITF Document</label>
-              <input className="input" placeholder="Upload endpoint ready in backend /uploads/document" />
+              <input
+                className="input"
+                type="file"
+                accept=".pdf,image/png,image/jpeg"
+                onChange={(event) => setItfFile(event.target.files?.[0] ?? null)}
+              />
             </div>
           </div>
 

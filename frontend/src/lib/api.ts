@@ -62,6 +62,18 @@ async function authRequest<T>(path: string, token: string, init?: RequestInit) {
   return parseResponse<T>(response);
 }
 
+async function authMultipartRequest<T>(path: string, token: string, formData: FormData) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`
+    },
+    body: formData,
+    cache: "no-store"
+  });
+  return parseResponse<T>(response);
+}
+
 export async function loginUser(email: string, password: string): Promise<AuthTokens> {
   return publicRequest<AuthTokens>("/auth/login", {
     method: "POST",
@@ -108,10 +120,32 @@ export async function registerCoordinator(payload: {
   email: string;
   password: string;
   fullName: string;
+  inviteCode: string;
 }) {
   return publicRequest<{ message: string }>("/auth/register/coordinator", {
     method: "POST",
     body: JSON.stringify(payload)
+  });
+}
+
+export async function verifyEmailToken(token: string): Promise<AuthTokens> {
+  return publicRequest<AuthTokens>("/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ token })
+  });
+}
+
+export async function forgotPassword(email: string) {
+  return publicRequest<{ message: string }>("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email })
+  });
+}
+
+export async function resetPassword(token: string, password: string) {
+  return publicRequest<{ message: string }>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, password })
   });
 }
 
@@ -195,6 +229,21 @@ export async function applyToPlacement(token: string, placementId: string) {
   });
 }
 
+export async function applyToPlacementDetailed(
+  token: string,
+  payload: {
+    placementId: string;
+    coverLetter?: string;
+    resumeUrl?: string;
+    additionalDocs?: string[];
+  }
+) {
+  return authRequest<{ message: string; data: { id: string } }>("/students/applications", token, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
 export async function withdrawApplication(token: string, applicationId: string) {
   return authRequest<{ message: string }>(`/students/applications/${applicationId}`, token, {
     method: "DELETE"
@@ -224,6 +273,30 @@ export async function updateOrganizationProfile(
     method: "PUT",
     body: JSON.stringify(payload)
   });
+}
+
+export async function uploadStudentResume(token: string, file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  return authMultipartRequest<{ message: string; data: { resumeUrl: string } }>(
+    "/students/profile/resume",
+    token,
+    form
+  );
+}
+
+export async function uploadOrganizationDocument(
+  token: string,
+  file: File,
+  documentType: "cac" | "itf" | "logo"
+) {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("documentType", documentType);
+  return authMultipartRequest<{
+    message: string;
+    data: { cacDocumentUrl?: string; itfDocumentUrl?: string; logoUrl?: string };
+  }>("/organizations/profile/documents", token, form);
 }
 
 export async function getOrganizationPlacements(token: string) {

@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { applyToPlacement, getPlacementDetail } from "@/lib/api";
+import { applyToPlacementDetailed, getPlacementDetail } from "@/lib/api";
 import { Placement } from "@/lib/types";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -44,6 +44,10 @@ export default function StudentPlacementDetailPage() {
     startTransition(async () => {
       try {
         await applyToPlacement(session.accessToken, placement.id);
+        await applyToPlacementDetailed(session.accessToken, {
+          placementId: placement.id,
+          coverLetter: coverLetter || undefined
+        });
         setShowApply(false);
         setFeedback("Application submitted successfully.");
       } catch (error) {
@@ -85,7 +89,7 @@ export default function StudentPlacementDetailPage() {
           <section className="card">
             <h3 style={{ marginTop: 0 }}>Apply Modal</h3>
             <p style={{ color: "#4B5563" }}>
-              Cover letter and resume options are prepared for upload integration.
+              Include a short cover letter before submitting your application.
             </p>
 
             <button
@@ -108,13 +112,17 @@ export default function StudentPlacementDetailPage() {
                   />
                 </div>
                 <div>
-                  <label className="label">Resume Source</label>
-                  <select className="select" defaultValue="profile">
-                    <option value="profile">Use profile resume</option>
-                    <option value="upload">Upload new resume (coming soon)</option>
-                  </select>
+                  <label className="label">Resume</label>
+                  <p style={{ margin: 0, color: "#6B7280", fontSize: 13 }}>
+                    Your current profile resume will be used.
+                  </p>
                 </div>
-                <button className="btn btn-primary" type="button" onClick={submitApplication} disabled={isPending}>
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={submitApplication}
+                  disabled={isPending}
+                >
                   {isPending ? "Submitting..." : "Submit Application"}
                 </button>
               </div>

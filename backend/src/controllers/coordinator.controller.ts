@@ -1,8 +1,15 @@
 import { NextFunction, Request, Response } from "express";
-import { ApplicationStatus, PlacementStatus, UserRole, VerificationStatus } from "@prisma/client";
+import {
+  ApplicationStatus,
+  NotificationType,
+  PlacementStatus,
+  UserRole,
+  VerificationStatus
+} from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../config/database";
 import { AppError } from "../utils/errors";
+import { NotificationService } from "../services/notification.service";
 
 const moderationSchema = z.object({
   reason: z.string().trim().min(3).optional()
@@ -54,15 +61,15 @@ export async function approveOrganization(req: Request, res: Response, next: Nex
       prisma.organization.update({
         where: { id: org.id },
         data: { verificationStatus: VerificationStatus.APPROVED }
-      }),
-      prisma.notification.create({
-        data: {
-          userId: org.userId,
-          title: "Organization Approved",
-          message: "Your organization has been approved and can now post placements."
-        }
       })
     ]);
+    await NotificationService.create({
+      userId: org.userId,
+      type: NotificationType.ORGANIZATION_APPROVED,
+      title: "Organization Approved",
+      message: "Your organization has been approved and can now post placements.",
+      data: { organizationId: org.id }
+    });
 
     res.json({ message: "Organization approved", data: updated });
   } catch (error) {
@@ -83,17 +90,17 @@ export async function rejectOrganization(req: Request, res: Response, next: Next
       prisma.organization.update({
         where: { id: org.id },
         data: { verificationStatus: VerificationStatus.REJECTED }
-      }),
-      prisma.notification.create({
-        data: {
-          userId: org.userId,
-          title: "Organization Rejected",
-          message: reason
-            ? `Your organization verification was rejected. Reason: ${reason}`
-            : "Your organization verification was rejected."
-        }
       })
     ]);
+    await NotificationService.create({
+      userId: org.userId,
+      type: NotificationType.ORGANIZATION_REJECTED,
+      title: "Organization Rejected",
+      message: reason
+        ? `Your organization verification was rejected. Reason: ${reason}`
+        : "Your organization verification was rejected.",
+      data: { organizationId: org.id, reason: reason ?? null }
+    });
 
     res.json({ message: "Organization rejected", data: updated });
   } catch (error) {
@@ -118,17 +125,17 @@ export async function suspendOrganization(req: Request, res: Response, next: Nex
       prisma.user.update({
         where: { id: org.userId },
         data: { isActive: false }
-      }),
-      prisma.notification.create({
-        data: {
-          userId: org.userId,
-          title: "Organization Suspended",
-          message: reason
-            ? `Your organization account has been suspended. Reason: ${reason}`
-            : "Your organization account has been suspended."
-        }
       })
     ]);
+    await NotificationService.create({
+      userId: org.userId,
+      type: NotificationType.ORGANIZATION_REJECTED,
+      title: "Organization Suspended",
+      message: reason
+        ? `Your organization account has been suspended. Reason: ${reason}`
+        : "Your organization account has been suspended.",
+      data: { organizationId: org.id, reason: reason ?? null }
+    });
 
     res.json({ message: "Organization suspended", data: updatedOrg });
   } catch (error) {
@@ -394,13 +401,15 @@ export async function createAnnouncement(req: Request, res: Response, next: Next
     }
 
     const tag = `ANN:${req.user.id}:${Date.now()}`;
-    await prisma.notification.createMany({
-      data: targetUsers.map((user) => ({
+    await NotificationService.createMany(
+      targetUsers.map((user) => ({
         userId: user.id,
+        type: NotificationType.ANNOUNCEMENT,
         title: `${tag}:${payload.title}`,
-        message: payload.message
+        message: payload.message,
+        data: { targetRole: payload.targetRole }
       }))
-    });
+    );
 
     res.status(201).json({
       message: "Announcement created",

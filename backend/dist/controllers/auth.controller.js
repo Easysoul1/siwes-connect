@@ -5,10 +5,14 @@ exports.registerOrganization = registerOrganization;
 exports.registerCoordinator = registerCoordinator;
 exports.login = login;
 exports.refresh = refresh;
+exports.verifyEmail = verifyEmail;
+exports.forgotPassword = forgotPassword;
+exports.resetPassword = resetPassword;
 exports.logout = logout;
 exports.me = me;
 const zod_1 = require("zod");
 const database_1 = require("../config/database");
+const env_1 = require("../config/env");
 const errors_1 = require("../utils/errors");
 const auth_service_1 = require("../services/auth.service");
 const studentRegistrationSchema = zod_1.z.object({
@@ -30,7 +34,8 @@ const organizationRegistrationSchema = zod_1.z.object({
 const coordinatorRegistrationSchema = zod_1.z.object({
     email: zod_1.z.string().email(),
     password: zod_1.z.string().min(8),
-    fullName: zod_1.z.string().trim().min(2)
+    fullName: zod_1.z.string().trim().min(2),
+    inviteCode: zod_1.z.string().trim().min(3)
 });
 const loginSchema = zod_1.z.object({
     email: zod_1.z.string().email(),
@@ -38,6 +43,16 @@ const loginSchema = zod_1.z.object({
 });
 const refreshSchema = zod_1.z.object({
     refreshToken: zod_1.z.string().min(16)
+});
+const verifyEmailSchema = zod_1.z.object({
+    token: zod_1.z.string().min(16)
+});
+const forgotPasswordSchema = zod_1.z.object({
+    email: zod_1.z.string().email()
+});
+const resetPasswordSchema = zod_1.z.object({
+    token: zod_1.z.string().min(16),
+    password: zod_1.z.string().min(8)
 });
 async function registerStudent(req, res, next) {
     try {
@@ -62,7 +77,14 @@ async function registerOrganization(req, res, next) {
 async function registerCoordinator(req, res, next) {
     try {
         const payload = coordinatorRegistrationSchema.parse(req.body);
-        const result = await auth_service_1.AuthService.registerCoordinator(payload);
+        if (payload.inviteCode !== env_1.env.COORDINATOR_INVITE_CODE) {
+            throw new errors_1.AppError(403, "Invalid coordinator invite code");
+        }
+        const result = await auth_service_1.AuthService.registerCoordinator({
+            email: payload.email,
+            password: payload.password,
+            fullName: payload.fullName
+        });
         res.status(201).json({ message: "Coordinator registration successful", data: result });
     }
     catch (error) {
@@ -89,8 +111,54 @@ async function refresh(req, res, next) {
         next(error);
     }
 }
-async function logout(_req, res) {
-    res.status(200).json({ message: "Logout successful" });
+async function verifyEmail(req, res, next) {
+    try {
+        const payload = verifyEmailSchema.parse(req.body);
+        const result = await auth_service_1.AuthService.verifyEmail(payload.token);
+        res.status(200).json({ message: "Email verified successfully", ...result });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function forgotPassword(req, res, next) {
+    try {
+        const payload = forgotPasswordSchema.parse(req.body);
+        await auth_service_1.AuthService.forgotPassword(payload.email);
+        res.status(200).json({
+            message: "If the account exists, a password reset link has been sent"
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function resetPassword(req, res, next) {
+    try {
+        const payload = resetPasswordSchema.parse(req.body);
+        await auth_service_1.AuthService.resetPassword(payload.token, payload.password);
+        res.status(200).json({ message: "Password reset successful" });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function logout(req, res, next) {
+    try {
+        if (!req.user) {
+            throw new errors_1.AppError(401, "Unauthorized");
+        }
+        const body = zod_1.z
+            .object({
+            refreshToken: zod_1.z.string().min(16).optional()
+        })
+            .parse(req.body ?? {});
+        await auth_service_1.AuthService.logout(req.user.id, body.refreshToken);
+        res.status(200).json({ message: "Logout successful" });
+    }
+    catch (error) {
+        next(error);
+    }
 }
 async function me(req, res, next) {
     try {

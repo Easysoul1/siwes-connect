@@ -1,8 +1,16 @@
 import { NextFunction, Request, Response } from "express";
-import { ApplicationStatus, PlacementStatus, VerificationStatus } from "@prisma/client";
+import {
+  ApplicationStatus,
+  NotificationType,
+  PlacementStatus,
+  VerificationStatus
+} from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../config/database";
 import { AppError } from "../utils/errors";
+import { UploadService } from "../services/upload.service";
+import { NotificationService } from "../services/notification.service";
+import { parsePagination } from "../utils/pagination";
 
 const updateOrganizationSchema = z.object({
   companyName: z.string().trim().min(2)
@@ -64,24 +72,79 @@ export async function updateOrganizationProfile(req: Request, res: Response, nex
   }
 }
 
-export async function uploadOrganizationDocuments(_req: Request, res: Response) {
-  res.status(202).json({
-    message: "Document upload endpoint is ready for Cloudinary integration",
-    data: null
-  });
+export async function uploadOrganizationDocuments(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (!req.user) throw new AppError(401, "Unauthorized");
+    if (!req.file) throw new AppError(400, "No file uploaded");
+
+    const documentTypeRaw = typeof req.body.documentType === "string" ? req.body.documentType : "";
+    const documentType = documentTypeRaw.trim().toLowerCase();
+    if (!["cac", "itf", "logo"].includes(documentType)) {
+      throw new AppError(400, "documentType must be one of: cac, itf, logo");
+    }
+
+    const organization = await getOrganizationByUserId(req.user.id);
+
+    const uploaded = await UploadService.uploadBuffer(req.file.buffer, {
+      folder: documentType === "logo" ? "siwes/logos" : "siwes/documents",
+      resourceType: "auto"
+    });
+
+    const data =
+      documentType === "cac"
+        ? { cacDocumentUrl: uploaded.url }
+        : documentType === "itf"
+          ? { itfDocumentUrl: uploaded.url }
+          : { logoUrl: uploaded.url };
+
+    const updated = await prisma.organization.update({
+      where: { id: organization.id },
+      data
+    });
+
+    res.status(201).json({
+      message: "Document uploaded successfully",
+      data: {
+        cacDocumentUrl: updated.cacDocumentUrl,
+        itfDocumentUrl: updated.itfDocumentUrl,
+        logoUrl: updated.logoUrl
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function getOrganizationPlacements(req: Request, res: Response, next: NextFunction) {
   try {
     if (!req.user) throw new AppError(401, "Unauthorized");
     const organization = await getOrganizationByUserId(req.user.id);
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>);
 
-    const placements = await prisma.placement.findMany({
-      where: { organizationId: organization.id },
-      orderBy: { createdAt: "desc" }
+    const where = { organizationId: organization.id };
+    const [placements, total] = await prisma.$transaction([
+      prisma.placement.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit
+      }),
+      prisma.placement.count({ where })
+    ]);
+
+    res.json({
+      data: placements,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit))
+      }
     });
-
-    res.json({ data: placements });
   } catch (error) {
     next(error);
   }
@@ -215,14 +278,29 @@ export async function getOrganizationApplications(req: Request, res: Response, n
   try {
     if (!req.user) throw new AppError(401, "Unauthorized");
     const organization = await getOrganizationByUserId(req.user.id);
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>);
 
-    const applications = await prisma.application.findMany({
-      where: { placement: { organizationId: organization.id } },
-      include: { placement: true, student: true },
-      orderBy: { createdAt: "desc" }
+    const where = { placement: { organizationId: organization.id } };
+    const [applications, total] = await prisma.$transaction([
+      prisma.application.findMany({
+        where,
+        include: { placement: true, student: true },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit
+      }),
+      prisma.application.count({ where })
+    ]);
+
+    res.json({
+      data: applications,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit))
+      }
     });
-
-    res.json({ data: applications });
   } catch (error) {
     next(error);
   }
@@ -269,6 +347,25 @@ export async function updateApplicationStatus(req: Request, res: Response, next:
       data: { status: status as ApplicationStatus }
     });
 
+    const student = await prisma.student.findUnique({
+      where: { id: application.studentId },
+      select: { userId: true }
+    });
+    if (student) {
+      await NotificationService.create({
+        userId: student.userId,
+        type:
+          status === "ACCEPTED"
+            ? NotificationType.APPLICATION_ACCEPTED
+            : status === "REJECTED"
+              ? NotificationType.APPLICATION_REJECTED
+              : NotificationType.APPLICATION_REVIEWED,
+        title: "Application status updated",
+        message: `Your application for ${application.placement.title} is now ${status}.`,
+        data: { applicationId: application.id, status }
+      });
+    }
+
     res.json({ message: "Application status updated", data: updated });
   } catch (error) {
     next(error);
@@ -305,7 +402,11 @@ export async function confirmPlacement(req: Request, res: Response, next: NextFu
     const [updated] = await prisma.$transaction([
       prisma.application.update({
         where: { id: application.id },
-        data: { status: ApplicationStatus.PLACEMENT_CONFIRMED }
+        data: {
+          status: ApplicationStatus.PLACEMENT_CONFIRMED,
+          confirmedAt:
+            application.status === ApplicationStatus.PLACEMENT_CONFIRMED ? application.confirmedAt : new Date()
+        }
       }),
       ...(application.status === ApplicationStatus.PLACEMENT_CONFIRMED
         ? []
@@ -316,6 +417,20 @@ export async function confirmPlacement(req: Request, res: Response, next: NextFu
             })
           ])
     ]);
+
+    const student = await prisma.student.findUnique({
+      where: { id: application.studentId },
+      select: { userId: true }
+    });
+    if (student) {
+      await NotificationService.create({
+        userId: student.userId,
+        type: NotificationType.PLACEMENT_CONFIRMED,
+        title: "Placement confirmed",
+        message: `Your placement for ${application.placement.title} has been confirmed.`,
+        data: { applicationId: application.id, placementId: application.placementId }
+      });
+    }
 
     res.json({ message: "Placement confirmed", data: updated });
   } catch (error) {

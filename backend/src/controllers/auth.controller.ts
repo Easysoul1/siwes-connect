@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 import { prisma } from "../config/database";
+import { env } from "../config/env";
 import { AppError } from "../utils/errors";
 import { AuthService } from "../services/auth.service";
 
@@ -25,7 +26,8 @@ const organizationRegistrationSchema = z.object({
 const coordinatorRegistrationSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  fullName: z.string().trim().min(2)
+  fullName: z.string().trim().min(2),
+  inviteCode: z.string().trim().min(3)
 });
 
 const loginSchema = z.object({
@@ -35,6 +37,19 @@ const loginSchema = z.object({
 
 const refreshSchema = z.object({
   refreshToken: z.string().min(16)
+});
+
+const verifyEmailSchema = z.object({
+  token: z.string().min(16)
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email()
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(16),
+  password: z.string().min(8)
 });
 
 export async function registerStudent(req: Request, res: Response, next: NextFunction) {
@@ -60,7 +75,15 @@ export async function registerOrganization(req: Request, res: Response, next: Ne
 export async function registerCoordinator(req: Request, res: Response, next: NextFunction) {
   try {
     const payload = coordinatorRegistrationSchema.parse(req.body);
-    const result = await AuthService.registerCoordinator(payload);
+    if (payload.inviteCode !== env.COORDINATOR_INVITE_CODE) {
+      throw new AppError(403, "Invalid coordinator invite code");
+    }
+
+    const result = await AuthService.registerCoordinator({
+      email: payload.email,
+      password: payload.password,
+      fullName: payload.fullName
+    });
     res.status(201).json({ message: "Coordinator registration successful", data: result });
   } catch (error) {
     next(error);
@@ -87,8 +110,54 @@ export async function refresh(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-export async function logout(_req: Request, res: Response) {
-  res.status(200).json({ message: "Logout successful" });
+export async function verifyEmail(req: Request, res: Response, next: NextFunction) {
+  try {
+    const payload = verifyEmailSchema.parse(req.body);
+    const result = await AuthService.verifyEmail(payload.token);
+    res.status(200).json({ message: "Email verified successfully", ...result });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function forgotPassword(req: Request, res: Response, next: NextFunction) {
+  try {
+    const payload = forgotPasswordSchema.parse(req.body);
+    await AuthService.forgotPassword(payload.email);
+    res.status(200).json({
+      message: "If the account exists, a password reset link has been sent"
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function resetPassword(req: Request, res: Response, next: NextFunction) {
+  try {
+    const payload = resetPasswordSchema.parse(req.body);
+    await AuthService.resetPassword(payload.token, payload.password);
+    res.status(200).json({ message: "Password reset successful" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function logout(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) {
+      throw new AppError(401, "Unauthorized");
+    }
+
+    const body = z
+      .object({
+        refreshToken: z.string().min(16).optional()
+      })
+      .parse(req.body ?? {});
+    await AuthService.logout(req.user.id, body.refreshToken);
+    res.status(200).json({ message: "Logout successful" });
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function me(req: Request, res: Response, next: NextFunction) {

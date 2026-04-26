@@ -20,6 +20,7 @@ const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
 const database_1 = require("../config/database");
 const errors_1 = require("../utils/errors");
+const notification_service_1 = require("../services/notification.service");
 const moderationSchema = zod_1.z.object({
     reason: zod_1.z.string().trim().min(3).optional()
 });
@@ -67,15 +68,15 @@ async function approveOrganization(req, res, next) {
             database_1.prisma.organization.update({
                 where: { id: org.id },
                 data: { verificationStatus: client_1.VerificationStatus.APPROVED }
-            }),
-            database_1.prisma.notification.create({
-                data: {
-                    userId: org.userId,
-                    title: "Organization Approved",
-                    message: "Your organization has been approved and can now post placements."
-                }
             })
         ]);
+        await notification_service_1.NotificationService.create({
+            userId: org.userId,
+            type: client_1.NotificationType.ORGANIZATION_APPROVED,
+            title: "Organization Approved",
+            message: "Your organization has been approved and can now post placements.",
+            data: { organizationId: org.id }
+        });
         res.json({ message: "Organization approved", data: updated });
     }
     catch (error) {
@@ -95,17 +96,17 @@ async function rejectOrganization(req, res, next) {
             database_1.prisma.organization.update({
                 where: { id: org.id },
                 data: { verificationStatus: client_1.VerificationStatus.REJECTED }
-            }),
-            database_1.prisma.notification.create({
-                data: {
-                    userId: org.userId,
-                    title: "Organization Rejected",
-                    message: reason
-                        ? `Your organization verification was rejected. Reason: ${reason}`
-                        : "Your organization verification was rejected."
-                }
             })
         ]);
+        await notification_service_1.NotificationService.create({
+            userId: org.userId,
+            type: client_1.NotificationType.ORGANIZATION_REJECTED,
+            title: "Organization Rejected",
+            message: reason
+                ? `Your organization verification was rejected. Reason: ${reason}`
+                : "Your organization verification was rejected.",
+            data: { organizationId: org.id, reason: reason ?? null }
+        });
         res.json({ message: "Organization rejected", data: updated });
     }
     catch (error) {
@@ -129,17 +130,17 @@ async function suspendOrganization(req, res, next) {
             database_1.prisma.user.update({
                 where: { id: org.userId },
                 data: { isActive: false }
-            }),
-            database_1.prisma.notification.create({
-                data: {
-                    userId: org.userId,
-                    title: "Organization Suspended",
-                    message: reason
-                        ? `Your organization account has been suspended. Reason: ${reason}`
-                        : "Your organization account has been suspended."
-                }
             })
         ]);
+        await notification_service_1.NotificationService.create({
+            userId: org.userId,
+            type: client_1.NotificationType.ORGANIZATION_REJECTED,
+            title: "Organization Suspended",
+            message: reason
+                ? `Your organization account has been suspended. Reason: ${reason}`
+                : "Your organization account has been suspended.",
+            data: { organizationId: org.id, reason: reason ?? null }
+        });
         res.json({ message: "Organization suspended", data: updatedOrg });
     }
     catch (error) {
@@ -375,13 +376,13 @@ async function createAnnouncement(req, res, next) {
             return res.status(200).json({ message: "No users to notify", data: { sent: 0 } });
         }
         const tag = `ANN:${req.user.id}:${Date.now()}`;
-        await database_1.prisma.notification.createMany({
-            data: targetUsers.map((user) => ({
-                userId: user.id,
-                title: `${tag}:${payload.title}`,
-                message: payload.message
-            }))
-        });
+        await notification_service_1.NotificationService.createMany(targetUsers.map((user) => ({
+            userId: user.id,
+            type: client_1.NotificationType.ANNOUNCEMENT,
+            title: `${tag}:${payload.title}`,
+            message: payload.message,
+            data: { targetRole: payload.targetRole }
+        })));
         res.status(201).json({
             message: "Announcement created",
             data: { sent: targetUsers.length, tag }

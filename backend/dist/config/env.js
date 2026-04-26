@@ -7,9 +7,18 @@ const schema = zod_1.z.object({
     NODE_ENV: zod_1.z.enum(["development", "test", "production"]).default("development"),
     PORT: zod_1.z.coerce.number().default(5000),
     JWT_SECRET: zod_1.z.string().min(32).default("change-this-super-secret-jwt-key-32-chars"),
+    JWT_REFRESH_SECRET: zod_1.z.string().min(32).default("change-this-refresh-secret-key-32-chars"),
     JWT_EXPIRES_IN: zod_1.z.string().default("15m"),
     JWT_REFRESH_EXPIRES_IN: zod_1.z.string().default("7d"),
     DATABASE_URL: zod_1.z.string().default("postgresql://siwes:siwes123@localhost:5432/siwes_connect"),
-    FRONTEND_URL: zod_1.z.string().default("http://localhost:3000")
+    FRONTEND_URL: zod_1.z.string().default("http://localhost:3000"),
+    APP_URL: zod_1.z.string().default("http://localhost:3000"),
+    COORDINATOR_INVITE_CODE: zod_1.z.string().default("coord_2024_invite"),
+    SENDGRID_API_KEY: zod_1.z.string().optional(),
+    FROM_EMAIL: zod_1.z.string().email().default("noreply@siwesconnect.ng"),
+    FROM_NAME: zod_1.z.string().default("SIWES Connect"),
+    CLOUDINARY_CLOUD_NAME: zod_1.z.string().optional(),
+    CLOUDINARY_API_KEY: zod_1.z.string().optional(),
+    CLOUDINARY_API_SECRET: zod_1.z.string().optional()
 });
 exports.env = schema.parse(process.env);

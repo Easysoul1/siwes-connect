@@ -5,25 +5,22 @@ const express_1 = require("express");
 const client_1 = require("@prisma/client");
 const authenticate_1 = require("../middleware/authenticate");
 const authorize_1 = require("../middleware/authorize");
+const upload_1 = require("../middleware/upload");
 const placement_controller_1 = require("../controllers/placement.controller");
 const notification_controller_1 = require("../controllers/notification.controller");
+const upload_controller_1 = require("../controllers/upload.controller");
 exports.placementRouter = (0, express_1.Router)();
 exports.notificationRouter = (0, express_1.Router)();
 exports.uploadRouter = (0, express_1.Router)();
 exports.placementRouter.get("/", placement_controller_1.getPlacements);
 exports.placementRouter.get("/:id", placement_controller_1.getPlacementById);
+exports.placementRouter.get("/:id/organization", placement_controller_1.getPlacementOrganization);
 exports.notificationRouter.use(authenticate_1.authenticate);
 exports.notificationRouter.get("/", notification_controller_1.getNotifications);
 exports.notificationRouter.patch("/:id/read", notification_controller_1.markNotificationAsRead);
 exports.notificationRouter.patch("/read-all", notification_controller_1.markAllNotificationsAsRead);
 exports.notificationRouter.delete("/:id", notification_controller_1.deleteNotification);
 exports.notificationRouter.get("/unread-count", notification_controller_1.getUnreadCount);
-exports.uploadRouter.post("/resume", authenticate_1.authenticate, (0, authorize_1.authorize)(client_1.UserRole.STUDENT), (_req, res) => {
-    res.status(202).json({ message: "Resume upload wired for Cloudinary integration" });
-});
-exports.uploadRouter.post("/document", authenticate_1.authenticate, (0, authorize_1.authorize)(client_1.UserRole.ORGANIZATION), (_req, res) => {
-    res.status(202).json({ message: "Organization document upload wired for Cloudinary integration" });
-});
-exports.uploadRouter.post("/avatar", authenticate_1.authenticate, (_req, res) => {
-    res.status(202).json({ message: "Avatar upload wired for Cloudinary integration" });
-});
+exports.uploadRouter.post("/resume", authenticate_1.authenticate, (0, authorize_1.authorize)(client_1.UserRole.STUDENT), upload_1.resumeUpload.single("file"), upload_controller_1.uploadResume);
+exports.uploadRouter.post("/document", authenticate_1.authenticate, (0, authorize_1.authorize)(client_1.UserRole.ORGANIZATION), upload_1.documentUpload.single("file"), upload_controller_1.uploadDocument);
+exports.uploadRouter.post("/avatar", authenticate_1.authenticate, upload_1.avatarUpload.single("file"), upload_controller_1.uploadAvatar);

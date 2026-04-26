@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { prisma } from "../config/database";
 import { AppError } from "../utils/errors";
+import { parsePagination } from "../utils/pagination";
 
 async function getAuthUserId(req: Request) {
   if (!req.user) throw new AppError(401, "Unauthorized");
@@ -10,14 +11,29 @@ async function getAuthUserId(req: Request) {
 export async function getNotifications(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = await getAuthUserId(req);
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>);
 
-    const notifications = await prisma.notification.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" }
+    const [notifications, total, unreadCount] = await prisma.$transaction([
+      prisma.notification.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit
+      }),
+      prisma.notification.count({ where: { userId } }),
+      prisma.notification.count({ where: { userId, isRead: false } })
+    ]);
+
+    res.json({
+      data: notifications,
+      unreadCount,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit))
+      }
     });
-    const unreadCount = notifications.filter((item) => !item.isRead).length;
-
-    res.json({ data: notifications, unreadCount });
   } catch (error) {
     next(error);
   }
@@ -40,7 +56,7 @@ export async function markNotificationAsRead(
 
     const updated = await prisma.notification.update({
       where: { id: notification.id },
-      data: { isRead: true }
+      data: { isRead: true, readAt: new Date() }
     });
 
     res.json({ message: "Notification marked as read", data: updated });
@@ -58,7 +74,7 @@ export async function markAllNotificationsAsRead(
     const userId = await getAuthUserId(req);
     const result = await prisma.notification.updateMany({
       where: { userId, isRead: false },
-      data: { isRead: true }
+      data: { isRead: true, readAt: new Date() }
     });
 
     res.json({ message: "All notifications marked as read", data: { count: result.count } });

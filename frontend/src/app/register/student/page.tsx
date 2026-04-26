@@ -72,7 +72,7 @@ export default function StudentRegisterPage() {
           currentState: form.currentState,
           preferredStates: form.preferredStates
         });
-        setMessage("Student account created successfully. Proceed to login.");
+        setMessage("Student account created. Check your email to verify your account.");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Registration failed");
       }

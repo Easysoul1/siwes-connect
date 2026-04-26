@@ -1,15 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useTransition } from "react";
+import { forgotPassword } from "@/lib/api";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setMessage(`Password reset link prepared for ${email}. Connect backend mailer to activate.`);
+    startTransition(async () => {
+      try {
+        const response = await forgotPassword(email);
+        setMessage(response.message);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Unable to send reset email.");
+      }
+    });
   }
 
   return (
@@ -31,8 +40,8 @@ export default function ForgotPasswordPage() {
               required
             />
           </div>
-          <button className="btn btn-primary" type="submit">
-            Send Reset Link
+          <button className="btn btn-primary" type="submit" disabled={isPending}>
+            {isPending ? "Sending..." : "Send Reset Link"}
           </button>
         </form>
 

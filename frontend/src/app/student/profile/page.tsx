@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState, useTransition } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import {
   getStudentProfile,
+  uploadStudentResume,
   updateStudentPreferences,
   updateStudentProfile
 } from "@/lib/api";
@@ -13,6 +14,7 @@ export default function StudentProfilePage() {
   const { session } = useAuth();
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -74,6 +76,9 @@ export default function StudentProfilePage() {
           currentState: form.currentState,
           preferredStates: form.preferredStates
         });
+        if (resumeFile) {
+          await uploadStudentResume(session.accessToken, resumeFile);
+        }
         setMessage("Profile updated successfully.");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Failed to update profile");
@@ -177,6 +182,16 @@ export default function StudentProfilePage() {
                 );
               })}
             </div>
+          </div>
+
+          <div>
+            <label className="label">Resume (PDF)</label>
+            <input
+              className="input"
+              type="file"
+              accept="application/pdf"
+              onChange={(event) => setResumeFile(event.target.files?.[0] ?? null)}
+            />
           </div>
 
           <button className="btn btn-primary" type="submit" disabled={isPending}>
