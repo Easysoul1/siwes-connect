@@ -1,4 +1,4 @@
-import multer, { FileFilterCallback } from "multer";
+import multer from "multer";
 import { Request } from "express";
 import { AppError } from "../utils/errors";
 
@@ -11,7 +11,7 @@ function createUploader(config: UploadConfig) {
   return multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: config.maxBytes },
-    fileFilter: (_req: Request, file: Express.Multer.File, callback: FileFilterCallback) => {
+    fileFilter: (_req: Request, file: any, callback: any) => {
       if (!config.allowedMimeTypes.includes(file.mimetype)) {
         callback(new AppError(400, "Invalid file type"));
         return;
