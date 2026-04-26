@@ -32,7 +32,10 @@ const updatePreferencesSchema = zod_1.z.object({
     preferredStates: zod_1.z.array(zod_1.z.string().trim().min(2)).default([])
 });
 const applySchema = zod_1.z.object({
-    placementId: zod_1.z.string().min(1)
+    placementId: zod_1.z.string().min(1),
+    coverLetter: zod_1.z.string().trim().min(10).optional(),
+    resumeUrl: zod_1.z.string().url().optional(),
+    additionalDocs: zod_1.z.array(zod_1.z.string().url()).optional()
 });
 async function getStudentByUserId(userId) {
     const student = await database_1.prisma.student.findUnique({
@@ -172,7 +175,7 @@ async function submitApplication(req, res, next) {
     try {
         if (!req.user)
             throw new errors_1.AppError(401, "Unauthorized");
-        const { placementId } = applySchema.parse(req.body);
+        const { placementId, coverLetter, resumeUrl, additionalDocs } = applySchema.parse(req.body);
         const student = await getStudentByUserId(req.user.id);
         const placement = await database_1.prisma.placement.findUnique({ where: { id: placementId } });
         if (!placement || placement.status !== client_1.PlacementStatus.ACTIVE) {
@@ -198,14 +201,22 @@ async function submitApplication(req, res, next) {
         const application = existing && existing.status === client_1.ApplicationStatus.WITHDRAWN
             ? await database_1.prisma.application.update({
                 where: { id: existing.id },
-                data: { status: client_1.ApplicationStatus.SUBMITTED }
+                data: {
+                    status: client_1.ApplicationStatus.SUBMITTED,
+                    coverLetter,
+                    resumeUrl,
+                    additionalDocs: additionalDocs ?? []
+                }
             })
             : await database_1.prisma.application.create({
                 data: {
                     studentId: student.id,
                     placementId: placement.id,
                     organizationId: placement.organizationId,
-                    status: client_1.ApplicationStatus.SUBMITTED
+                    status: client_1.ApplicationStatus.SUBMITTED,
+                    coverLetter,
+                    resumeUrl,
+                    additionalDocs: additionalDocs ?? []
                 }
             });
         const organization = await database_1.prisma.organization.findUnique({

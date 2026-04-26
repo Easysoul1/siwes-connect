@@ -24,13 +24,21 @@ const API_BASE_URL = envApiUrl;
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let message = "Request failed";
+    let errors: { field: string; message: string }[] | undefined;
     try {
-      const body = (await response.json()) as { message?: string };
-      if (body.message) message = body.message;
+      const body = (await response.json()) as { message?: string; errors?: { field: string; message: string }[] };
+      if (body.errors && body.errors.length > 0) {
+        message = body.errors.map((e) => `${e.field}: ${e.message}`).join(", ");
+        errors = body.errors;
+      } else if (body.message) {
+        message = body.message;
+      }
     } catch {
       message = response.statusText || message;
     }
-    throw new Error(message);
+    const error = new Error(message);
+    (error as any).errors = errors;
+    throw error;
   }
 
   if (response.status === 204) return {} as T;
