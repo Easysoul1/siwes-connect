@@ -1,0 +1,34 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-json
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      - id: lint-backend
+        name: Lint backend TypeScript
+        entry: npm --workspace @siwes/backend run lint
+        language: system
+        files: ^backend/src/.*\.ts$
+        pass_filenames: false
+
+      - id: lint-frontend
+        name: Lint frontend TypeScript
+        entry: npm --workspace @siwes/frontend run lint
+        language: system
+        files: ^frontend/src/.*\.(ts|tsx)$
+        pass_filenames: false
+        stages: [commit]
+
+      - id: check-env-vars
+        name: Check environment variables
+        entry: bash -c 'if [[ -f backend/.env ]]; then grep -q "JWT_SECRET" backend/.env || (echo "Missing JWT_SECRET in backend/.env" && exit 1); fi'
+        language: system
+        stages: [commit]

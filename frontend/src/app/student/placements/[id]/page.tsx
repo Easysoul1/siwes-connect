@@ -43,7 +43,6 @@ export default function StudentPlacementDetailPage() {
     }
     startTransition(async () => {
       try {
-        await applyToPlacement(session.accessToken, placement.id);
         await applyToPlacementDetailed(session.accessToken, {
           placementId: placement.id,
           coverLetter: coverLetter || undefined
