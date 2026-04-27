@@ -5,7 +5,7 @@ import { FormEvent, useState, useTransition } from "react";
 import { registerOrganization } from "@/lib/api";
 import { NIGERIAN_STATES } from "@/shared/constants/states";
 
-const steps = ["Account", "Company Info", "Contact", "Location", "Documents"];
+const steps = ["Account", "Company Info", "Contact", "Location"];
 
 export default function OrganizationRegisterPage() {
   const [step, setStep] = useState(0);
@@ -23,10 +23,9 @@ export default function OrganizationRegisterPage() {
     contactEmail: "",
     state: "",
     lga: "",
-    address: "",
-    cacDocument: "",
-    itfDocument: ""
+    address: ""
   });
+  const maxStep = 3;
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -197,33 +196,6 @@ export default function OrganizationRegisterPage() {
             </div>
           ) : null}
 
-          {step === 4 ? (
-            <div className="form-grid">
-              <div>
-                <label className="label">CAC Document Link</label>
-                <input
-                  className="input"
-                  placeholder="https://..."
-                  value={form.cacDocument}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, cacDocument: event.target.value }))
-                  }
-                />
-              </div>
-              <div>
-                <label className="label">ITF Document Link</label>
-                <input
-                  className="input"
-                  placeholder="https://..."
-                  value={form.itfDocument}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, itfDocument: event.target.value }))
-                  }
-                />
-              </div>
-            </div>
-          ) : null}
-
           <div style={{ display: "flex", justifyContent: "space-between", gap: "0.7rem" }}>
             <button
               className="btn btn-secondary"
@@ -233,11 +205,11 @@ export default function OrganizationRegisterPage() {
             >
               Back
             </button>
-            {step < steps.length - 1 ? (
+            {step < maxStep ? (
               <button
                 className="btn btn-primary"
                 type="button"
-                onClick={() => setStep((prev) => Math.min(prev + 1, steps.length - 1))}
+                onClick={() => setStep((prev) => Math.min(prev + 1, maxStep))}
               >
                 Next
               </button>
