@@ -8,8 +8,6 @@ import styles from "./landing.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// ─── Data ────────────────────────────────────────────────────────────────────
-
 const studentSteps = [
   { n: "01", t: "Create your profile", b: "Complete your academic profile with field, level, CGPA, and preferred placement states across Nigeria." },
   { n: "02", t: "Discover smart matches", b: "Browse verified placements ranked by relevance — scored on location, field of study, level, and CGPA." },
@@ -44,8 +42,6 @@ const tickerItems = [
   "ITF Compliant", "68% Placement Rate",
 ];
 
-// ─── Component ───────────────────────────────────────────────────────────────
-
 export default function LandingPage() {
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -53,7 +49,6 @@ export default function LandingPage() {
     const ctx = gsap.context(() => {
       const ease = "power3.out";
 
-      // ── Entrance timeline ──────────────────────────────────────
       const tl = gsap.timeline({ defaults: { ease } });
       tl.from("#lp-nav",       { y: -70, opacity: 0, duration: 0.7 })
         .from(".lp-kicker",    { y: 18, opacity: 0, duration: 0.55 }, "-=0.35")
@@ -62,19 +57,16 @@ export default function LandingPage() {
         .from(".lp-hero-btn",  { y: 18, opacity: 0, stagger: 0.1, duration: 0.5 }, "-=0.4")
         .from(".lp-fcard",     { x: 56, opacity: 0, stagger: 0.13, duration: 0.65 }, "-=0.7");
 
-      // Animate progress bars inside floating cards after hero entrance
       setTimeout(() => {
         document.querySelectorAll<HTMLElement>(".lp-bar-fill").forEach((el) => {
           el.style.width = el.dataset.w + "%";
         });
       }, 1000);
 
-      // ── Orb floats ────────────────────────────────────────────
       gsap.to(".lp-orb-1", { y: -50, x: 30, duration: 9,  repeat: -1, yoyo: true, ease: "sine.inOut" });
       gsap.to(".lp-orb-2", { y: 40,  x: -25, duration: 11, repeat: -1, yoyo: true, ease: "sine.inOut" });
       gsap.to(".lp-orb-3", { y: -30, x: 40, duration: 7,  repeat: -1, yoyo: true, ease: "sine.inOut" });
 
-      // ── Stats counter ─────────────────────────────────────────
       document.querySelectorAll<HTMLElement>(".lp-cnt").forEach((el) => {
         const target = parseInt(el.dataset.t ?? "0", 10);
         const obj = { v: 0 };
@@ -85,13 +77,11 @@ export default function LandingPage() {
         });
       });
 
-      // ── Stats row entrance ────────────────────────────────────
       gsap.from(".lp-stat", {
         y: 30, opacity: 0, stagger: 0.1, duration: 0.6,
         scrollTrigger: { trigger: ".lp-stats-wrap", start: "top 88%" },
       });
 
-      // ── "How it works" ────────────────────────────────────────
       gsap.from("#lp-how .lp-s-head > *", {
         y: 28, opacity: 0, stagger: 0.1, duration: 0.65,
         scrollTrigger: { trigger: "#lp-how", start: "top 82%" },
@@ -105,7 +95,6 @@ export default function LandingPage() {
         scrollTrigger: { trigger: ".lp-proc-grid", start: "top 72%" },
       });
 
-      // ── Features ──────────────────────────────────────────────
       gsap.from("#lp-feat .lp-s-head > *", {
         y: 28, opacity: 0, stagger: 0.1, duration: 0.65,
         scrollTrigger: { trigger: "#lp-feat", start: "top 82%" },
@@ -115,7 +104,6 @@ export default function LandingPage() {
         scrollTrigger: { trigger: ".lp-feat-grid", start: "top 82%" },
       });
 
-      // ── CTA ───────────────────────────────────────────────────
       gsap.from("#lp-cta .lp-cta-inner > *", {
         y: 34, opacity: 0, stagger: 0.15, duration: 0.7,
         scrollTrigger: { trigger: "#lp-cta", start: "top 85%" },
@@ -129,7 +117,6 @@ export default function LandingPage() {
   return (
     <div className={styles.lp} ref={rootRef}>
 
-      {/* ── NAV ────────────────────────────────────────────────── */}
       <nav className={styles.nav} id="lp-nav">
         <Link href="/" className={styles.navBrand}>
           SIWES <em>Connect</em>
@@ -145,16 +132,13 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* ── HERO ───────────────────────────────────────────────── */}
       <section className={styles.hero}>
-        {/* Ambient orbs */}
         <div className={styles.heroBg}>
           <div className={`${styles.orb} lp-orb-1`} />
           <div className={`${styles.orb} ${styles.orb2} lp-orb-2`} />
           <div className={`${styles.orb} ${styles.orb3} lp-orb-3`} />
         </div>
 
-        {/* Main copy */}
         <div className={styles.heroContent}>
           <div className={`${styles.kicker} lp-kicker`}>
             <span className={styles.kickerDot} />
@@ -180,7 +164,6 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Floating UI cards */}
         <div className={styles.floatCards}>
           <div className={`${styles.fcard} lp-fcard`}>
             <div className={styles.fcardRow}>
@@ -214,7 +197,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── TICKER ─────────────────────────────────────────────── */}
       <div className={styles.tickerWrap}>
         <div className={styles.tickerTrack}>
           {[...tickerItems, ...tickerItems].map((item, i) => (
@@ -226,7 +208,6 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ── STATS ──────────────────────────────────────────────── */}
       <div className={`${styles.statsWrap} lp-stats-wrap`}>
         {stats.map((s) => (
           <div className={`${styles.stat} lp-stat`} key={s.label}>
@@ -239,7 +220,6 @@ export default function LandingPage() {
         ))}
       </div>
 
-      {/* ── HOW IT WORKS ───────────────────────────────────────── */}
       <section className={styles.section} id="lp-how">
         <div className={`${styles.sHead} lp-s-head`}>
           <p className={styles.sLabel}>The Process</p>
@@ -247,7 +227,6 @@ export default function LandingPage() {
           <p className={styles.sSub}>Purpose-built workflows for every stakeholder in the SIWES ecosystem.</p>
         </div>
         <div className={`${styles.procGrid} lp-proc-grid`}>
-          {/* Student card */}
           <div className={`${styles.procCard} lp-proc-card`}>
             <div className={styles.procRole}>
               <div className={`${styles.roleIco} ${styles.icoGreen}`}>🎓</div>
@@ -260,7 +239,6 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-          {/* Organization card */}
           <div className={`${styles.procCard} lp-proc-card`}>
             <div className={styles.procRole}>
               <div className={`${styles.roleIco} ${styles.icoGold}`}>🏢</div>
@@ -276,7 +254,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── FEATURES ───────────────────────────────────────────── */}
       <section className={`${styles.section} ${styles.sectionAlt}`} id="lp-feat">
         <div className={`${styles.sHead} lp-s-head`}>
           <p className={styles.sLabel}>Capabilities</p>
@@ -294,7 +271,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA STRIP ──────────────────────────────────────────── */}
       <div className={styles.ctaStrip} id="lp-cta">
         <div className={styles.ctaOrb} />
         <div className={`${styles.ctaInner} lp-cta-inner`}>
@@ -312,7 +288,6 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ── FOOTER ─────────────────────────────────────────────── */}
       <footer className={styles.footer}>
         <div>
           <div className={styles.footerBrand}>SIWES <em>Connect</em></div>
