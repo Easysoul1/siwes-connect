@@ -1,6 +1,6 @@
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Bricolage+Grotesque:wght@400;500;600;700&display=swap");
-
 :root {
+  --font-fraunces: var(--font-display, serif);
+  --font-outfit: var(--font-body, sans-serif);
   --color-primary-50: #ecfdf5;
   --color-primary-100: #d1fae5;
   --color-primary-400: #34d399;
@@ -43,7 +43,7 @@ body {
 }
 
 body {
-  font-family: "Plus Jakarta Sans", sans-serif;
+  font-family: var(--font-outfit), "Plus Jakarta Sans", sans-serif;
   background: radial-gradient(circle at top, #dcfce7, var(--bg-base) 36%, #ecfeff);
   color: var(--text-primary);
 }
