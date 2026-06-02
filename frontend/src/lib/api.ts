@@ -6,6 +6,7 @@ import {
   CoordinatorOverviewStats,
   CoordinatorStudentDetail,
   CoordinatorStudent,
+  LogbookEntry,
   NotificationItem,
   NotificationsResponse,
   OrganizationDashboardStats,
@@ -180,6 +181,25 @@ export async function getPlacementDetail(id: string) {
   const body = await publicRequest<{ data: Placement & { organization?: OrganizationSummary } }>(
     `/placements/${id}`
   );
+  return body.data;
+}
+
+export async function getListedOrganizations(): Promise<
+  Array<{ id: string; companyName: string; description: string | null; industry: string | null; website: string | null; logoUrl: string | null; state: string | null; _count: { placements: number } }>
+> {
+  const body = await publicRequest<{ data: any[] }>("/directory/organizations");
+  return body.data;
+}
+
+export async function getOrganizationPublicPlacements(orgId: string): Promise<Placement[]> {
+  const body = await publicRequest<{ data: Placement[] }>(
+    `/directory/organizations/${orgId}/placements`
+  );
+  return body.data;
+}
+
+export async function getAllPlacements(token: string): Promise<Placement[]> {
+  const body = await authRequest<{ data: Placement[] }>("/students/placements/all", token);
   return body.data;
 }
 
@@ -547,6 +567,60 @@ export async function deleteNotification(token: string, id: string) {
   return authRequest<{ message: string }>(`/notifications/${id}`, token, {
     method: "DELETE"
   });
+}
+
+export async function getMyLogbook(token: string): Promise<LogbookEntry[]> {
+  const body = await authRequest<{ data: LogbookEntry[] }>("/students/logbook", token);
+  return body.data;
+}
+
+export async function createLogbookEntry(
+  token: string,
+  payload: {
+    weekNumber: number;
+    date: string;
+    activity: string;
+    description: string;
+    supervisorComment?: string;
+  }
+) {
+  return authRequest<{ message: string; data: LogbookEntry }>(
+    "/students/logbook",
+    token,
+    { method: "POST", body: JSON.stringify(payload) }
+  );
+}
+
+export async function updateLogbookEntry(
+  token: string,
+  id: string,
+  payload: Partial<{
+    weekNumber: number;
+    date: string;
+    activity: string;
+    description: string;
+    supervisorComment: string;
+  }>
+) {
+  return authRequest<{ message: string; data: LogbookEntry }>(
+    `/students/logbook/${id}`,
+    token,
+    { method: "PUT", body: JSON.stringify(payload) }
+  );
+}
+
+export async function deleteLogbookEntry(token: string, id: string) {
+  return authRequest<{ message: string }>(`/students/logbook/${id}`, token, {
+    method: "DELETE"
+  });
+}
+
+export async function submitLogbookEntry(token: string, id: string) {
+  return authRequest<{ message: string; data: LogbookEntry }>(
+    `/students/logbook/${id}/submit`,
+    token,
+    { method: "PATCH" }
+  );
 }
 
 export async function getUnreadNotificationCount(

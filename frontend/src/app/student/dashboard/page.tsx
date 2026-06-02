@@ -78,6 +78,9 @@ export default function StudentDashboardPage() {
         <Link href="/student/applications" className="btn btn-secondary">
           My Applications
         </Link>
+        <Link href="/student/logbook" className="btn btn-secondary">
+          SIWES Logbook
+        </Link>
       </section>
 
       <section>

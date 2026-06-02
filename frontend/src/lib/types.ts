@@ -9,6 +9,12 @@ export type Placement = {
   filledSlots: number;
   status?: "DRAFT" | "ACTIVE" | "CLOSED";
   applicationDeadline: string;
+  organization?: {
+    id: string;
+    companyName: string;
+    verificationStatus: string;
+    logoUrl?: string | null;
+  };
 };
 
 export type ScoredPlacement = {
@@ -142,6 +148,31 @@ export type CoordinatorAnnouncement = {
   message: string;
   createdAt: string;
   recipients: number;
+};
+
+export type LogbookEntry = {
+  id: string;
+  weekNumber: number;
+  date: string;
+  activity: string;
+  description: string;
+  supervisorComment?: string | null;
+  status: "DRAFT" | "SUBMITTED";
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type OrgDirectoryEntry = {
+  id: string;
+  companyName: string;
+  description: string | null;
+  industry: string | null;
+  website: string | null;
+  logoUrl: string | null;
+  state: string | null;
+  address: string | null;
+  rating: number | null;
+  _count: { placements: number };
 };
 
 export type NotificationItem = {
