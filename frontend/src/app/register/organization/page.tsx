@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
 import { registerOrganization } from "@/lib/api";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { NIGERIAN_STATES } from "@/shared/constants/states";
 
 const steps = ["Account", "Company Info", "Contact", "Location"];
 
 export default function OrganizationRegisterPage() {
+  const router = useRouter();
+  const { setSession } = useAuth();
   const [step, setStep] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -33,12 +37,13 @@ export default function OrganizationRegisterPage() {
 
     startTransition(async () => {
       try {
-        await registerOrganization({
+        const session = await registerOrganization({
           email: form.email,
           password: form.password,
           companyName: form.companyName
         });
-        setMessage("Organization account created. Check your email to verify your account.");
+        setSession(session);
+        router.push("/organization/dashboard");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Registration failed");
       }
@@ -221,7 +226,11 @@ export default function OrganizationRegisterPage() {
           </div>
         </form>
 
-        {message ? <p style={{ color: "#4B5563", marginBottom: 0 }}>{message}</p> : null}
+        {message ? (
+          <div style={{ marginTop: "1rem" }}>
+            <p style={{ color: "#b91c1c", marginBottom: "0.5rem" }}>{message}</p>
+          </div>
+        ) : null}
 
         <p style={{ marginBottom: 0, marginTop: "1rem", color: "#4B5563" }}>
           Already registered?{" "}

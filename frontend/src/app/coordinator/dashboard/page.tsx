@@ -8,6 +8,7 @@ import {
   getCoordinatorOrganizations
 } from "@/lib/api";
 import { CoordinatorOverviewStats, OrganizationSummary } from "@/lib/types";
+import { StatsGridSkeleton } from "@/components/shared/Skeleton";
 
 export default function CoordinatorDashboardPage() {
   const { session } = useAuth();
@@ -66,7 +67,7 @@ export default function CoordinatorDashboardPage() {
           ))}
         </section>
       ) : session?.accessToken ? (
-        <p style={{ color: "#6B7280" }}>{isPending ? "Loading dashboard..." : message ?? "No data available yet."}</p>
+        isPending ? <StatsGridSkeleton count={6} /> : <p style={{ color: "#6B7280" }}>{message ?? "No data available yet."}</p>
       ) : (
         <p style={{ color: "#6B7280" }}>
           Sign in as coordinator to load dashboard metrics.

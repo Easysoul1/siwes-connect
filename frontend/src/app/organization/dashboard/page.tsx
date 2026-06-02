@@ -9,6 +9,7 @@ import {
   getOrganizationDashboardStats
 } from "@/lib/api";
 import { OrganizationDashboardStats } from "@/lib/types";
+import { StatsGridSkeleton } from "@/components/shared/Skeleton";
 
 type OrgApp = {
   id: string;
@@ -68,11 +69,15 @@ export default function OrganizationDashboardPage() {
           </Link>
         </section>
       </main>
-      <DashboardClient
-        stats={stats}
-        applications={applications}
-        token={session?.accessToken}
-      />
+      {!stats && isPending ? (
+        <StatsGridSkeleton count={6} />
+      ) : (
+        <DashboardClient
+          stats={stats}
+          applications={applications}
+          token={session?.accessToken}
+        />
+      )}
     </>
   );
 }

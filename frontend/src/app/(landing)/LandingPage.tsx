@@ -165,7 +165,7 @@ export default function LandingPage() {
             Build <span>Your Future.</span>
           </h1>
           <p className={styles.heroP} id="lp-p">
-            The SIWES marketplace where students, organizations, and institutional coordinators run placements with structure, visibility, and real confidence.
+            The SIWES Ecosystem where students, organizations, and institutional coordinators run placements with structure, visibility, and real confidence.
           </p>
           <div className={styles.heroCtas}>
             <Link href="/register/student" className={`${styles.btn} ${styles.btnPrimary} lp-hero-btn`}>

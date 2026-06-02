@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
 import { registerStudent } from "@/lib/api";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { NIGERIAN_STATES } from "@/shared/constants/states";
 
 const steps = [
@@ -13,6 +15,8 @@ const steps = [
 ];
 
 export default function StudentRegisterPage() {
+  const router = useRouter();
+  const { setSession } = useAuth();
   const [step, setStep] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -61,7 +65,7 @@ export default function StudentRegisterPage() {
 
     startTransition(async () => {
       try {
-        await registerStudent({
+        const session = await registerStudent({
           email: form.email,
           password: form.password,
           firstName: form.firstName,
@@ -72,7 +76,8 @@ export default function StudentRegisterPage() {
           currentState: form.currentState,
           preferredStates: form.preferredStates
         });
-        setMessage("Student account created. Check your email to verify your account.");
+        setSession(session);
+        router.push("/student/dashboard");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Registration failed");
       }
@@ -284,7 +289,11 @@ export default function StudentRegisterPage() {
           </div>
         </form>
 
-        {message ? <p style={{ color: "#4B5563", marginBottom: 0 }}>{message}</p> : null}
+        {message ? (
+          <div style={{ marginTop: "1rem" }}>
+            <p style={{ color: "#b91c1c", marginBottom: "0.5rem" }}>{message}</p>
+          </div>
+        ) : null}
 
         <p style={{ marginBottom: 0, marginTop: "1rem", color: "#4B5563" }}>
           Already registered?{" "}

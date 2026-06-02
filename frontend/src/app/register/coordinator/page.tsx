@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
 import { registerCoordinator } from "@/lib/api";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export default function CoordinatorRegisterPage() {
+  const router = useRouter();
+  const { setSession } = useAuth();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,8 +22,9 @@ export default function CoordinatorRegisterPage() {
 
     startTransition(async () => {
       try {
-        await registerCoordinator({ fullName, email, password, inviteCode });
-        setMessage("Coordinator account created. Check your email to verify your account.");
+        const session = await registerCoordinator({ fullName, email, password, inviteCode });
+        setSession(session);
+        router.push("/coordinator/dashboard");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Registration failed");
       }
@@ -80,7 +85,9 @@ export default function CoordinatorRegisterPage() {
           </button>
         </form>
 
-        {message ? <p style={{ color: "#4B5563", marginBottom: 0 }}>{message}</p> : null}
+        {message ? (
+          <p style={{ color: "#b91c1c", marginBottom: 0 }}>{message}</p>
+        ) : null}
 
         <p style={{ marginBottom: 0, marginTop: "1rem", color: "#4B5563" }}>
           Already registered?{" "}

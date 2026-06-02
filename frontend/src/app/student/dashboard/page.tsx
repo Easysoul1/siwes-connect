@@ -5,6 +5,7 @@ import { useEffect, useState, useTransition } from "react";
 import { getRecommendedPlacements, getStudentDashboardStats } from "@/lib/api";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { ScoredPlacement, StudentDashboardStats } from "@/lib/types";
+import { StatsGridSkeleton } from "@/components/shared/Skeleton";
 
 export default function StudentDashboardPage() {
   const { session } = useAuth();
@@ -63,7 +64,7 @@ export default function StudentDashboardPage() {
           ))}
         </section>
       ) : session?.accessToken ? (
-        <p style={{ color: "#6B7280" }}>{isPending ? "Loading dashboard..." : message ?? "No data available yet."}</p>
+        isPending ? <StatsGridSkeleton count={6} /> : <p style={{ color: "#6B7280" }}>{message ?? "No data available yet."}</p>
       ) : (
         <p style={{ color: "#6B7280" }}>
           Sign in as a student to load dashboard metrics.

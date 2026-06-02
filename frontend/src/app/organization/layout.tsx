@@ -1,5 +1,7 @@
 import { ReactNode } from "react";
 import { RolePortalShell } from "@/components/portal/RolePortalShell";
+import { RouteGuard } from "@/components/shared/RouteGuard";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 
 const links = [
   { href: "/organization/dashboard", label: "Dashboard" },
@@ -10,13 +12,17 @@ const links = [
 
 export default function OrganizationLayout({ children }: { children: ReactNode }) {
   return (
-    <RolePortalShell
-      roleName="Organization"
-      heading="Organization Workspace"
-      subtitle="Post placements, review candidates, and keep your profile verification-ready."
-      links={links}
-    >
-      {children}
-    </RolePortalShell>
+    <RouteGuard allowedRoles={["ORGANIZATION"]}>
+      <ErrorBoundary>
+        <RolePortalShell
+          roleName="Organization"
+          heading="Organization Workspace"
+          subtitle="Post placements, review candidates, and keep your profile verification-ready."
+          links={links}
+        >
+          {children}
+        </RolePortalShell>
+      </ErrorBoundary>
+    </RouteGuard>
   );
 }

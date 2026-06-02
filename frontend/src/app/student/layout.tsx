@@ -1,5 +1,7 @@
 import { ReactNode } from "react";
 import { RolePortalShell } from "@/components/portal/RolePortalShell";
+import { RouteGuard } from "@/components/shared/RouteGuard";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 
 const links = [
   { href: "/student/dashboard", label: "Dashboard" },
@@ -10,13 +12,17 @@ const links = [
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
   return (
-    <RolePortalShell
-      roleName="Student"
-      heading="Student Workspace"
-      subtitle="Search SIWES placements, track applications, and manage your profile."
-      links={links}
-    >
-      {children}
-    </RolePortalShell>
+    <RouteGuard allowedRoles={["STUDENT"]}>
+      <ErrorBoundary>
+        <RolePortalShell
+          roleName="Student"
+          heading="Student Workspace"
+          subtitle="Search SIWES placements, track applications, and manage your profile."
+          links={links}
+        >
+          {children}
+        </RolePortalShell>
+      </ErrorBoundary>
+    </RouteGuard>
   );
 }

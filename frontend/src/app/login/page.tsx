@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
 import { loginUser } from "@/lib/api";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { extractFieldErrors, FieldError } from "@/components/shared/FormErrors";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,11 +13,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
+    setFieldErrors(null);
 
     startTransition(async () => {
       try {
@@ -31,7 +34,12 @@ export default function LoginPage() {
               : "/coordinator/dashboard";
         router.push(roleRoute);
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Login failed");
+        const fe = extractFieldErrors(error);
+        if (Object.keys(fe).length > 0) {
+          setFieldErrors(fe);
+        } else {
+          setMessage(error instanceof Error ? error.message : "Login failed");
+        }
       }
     });
   }
@@ -54,9 +62,13 @@ export default function LoginPage() {
               className="input"
               type="email"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setFieldErrors(null);
+              }}
               required
             />
+            <FieldError field="email" errors={fieldErrors} />
           </div>
 
           <div>
@@ -68,10 +80,14 @@ export default function LoginPage() {
               className="input"
               type="password"
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                setFieldErrors(null);
+              }}
               minLength={8}
               required
             />
+            <FieldError field="password" errors={fieldErrors} />
           </div>
 
           <button className="btn btn-primary" type="submit" disabled={isPending}>
@@ -81,10 +97,7 @@ export default function LoginPage() {
 
         {message ? <p style={{ color: "#b91c1c", marginBottom: 0 }}>{message}</p> : null}
 
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "1rem" }}>
-          <Link href="/forgot-password" style={{ color: "#1E40AF", fontWeight: 600 }}>
-            Forgot password?
-          </Link>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
           <Link href="/register" style={{ color: "#1E40AF", fontWeight: 600 }}>
             Create account
           </Link>

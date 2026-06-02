@@ -9,11 +9,13 @@ import {
   updateStudentProfile
 } from "@/lib/api";
 import { NIGERIAN_STATES } from "@/shared/constants/states";
+import { extractFieldErrors, FieldError } from "@/components/shared/FormErrors";
 
 export default function StudentProfilePage() {
   const { session } = useAuth();
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [form, setForm] = useState({
     firstName: "",
@@ -80,8 +82,14 @@ export default function StudentProfilePage() {
           await uploadStudentResume(session.accessToken, resumeFile);
         }
         setMessage("Profile updated successfully.");
+        setFieldErrors(null);
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Failed to update profile");
+        const fe = extractFieldErrors(error);
+        if (Object.keys(fe).length > 0) {
+          setFieldErrors(fe);
+        } else {
+          setMessage(error instanceof Error ? error.message : "Failed to update profile");
+        }
       }
     });
   }
@@ -98,71 +106,87 @@ export default function StudentProfilePage() {
           <div className="form-grid">
             <div>
               <label className="label">First Name</label>
-              <input
-                className="input"
-                value={form.firstName}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, firstName: event.target.value }))
-                }
-              />
-            </div>
-            <div>
-              <label className="label">Last Name</label>
-              <input
-                className="input"
-                value={form.lastName}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, lastName: event.target.value }))
-                }
-              />
-            </div>
-            <div>
-              <label className="label">Department</label>
-              <input
-                className="input"
-                value={form.department}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, department: event.target.value }))
-                }
-              />
-            </div>
-            <div>
-              <label className="label">Level</label>
-              <input
-                className="input"
-                value={form.level}
-                onChange={(event) => setForm((prev) => ({ ...prev, level: event.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="label">CGPA</label>
-              <input
-                className="input"
-                type="number"
-                min={0}
-                max={5}
-                step="0.01"
-                value={form.cgpa}
-                onChange={(event) => setForm((prev) => ({ ...prev, cgpa: event.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="label">Current State</label>
-              <select
-                className="select"
-                value={form.currentState}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, currentState: event.target.value }))
-                }
-              >
-                <option value="">Select state</option>
-                {NIGERIAN_STATES.map((state) => (
-                  <option key={state} value={state}>
-                    {state.replaceAll("_", " ")}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <input
+              className="input"
+              value={form.firstName}
+              onChange={(event) => {
+                setForm((prev) => ({ ...prev, firstName: event.target.value }));
+                setFieldErrors(null);
+              }}
+            />
+            <FieldError field="firstName" errors={fieldErrors} />
+          </div>
+          <div>
+            <label className="label">Last Name</label>
+            <input
+              className="input"
+              value={form.lastName}
+              onChange={(event) => {
+                setForm((prev) => ({ ...prev, lastName: event.target.value }));
+                setFieldErrors(null);
+              }}
+            />
+            <FieldError field="lastName" errors={fieldErrors} />
+          </div>
+          <div>
+            <label className="label">Department</label>
+            <input
+              className="input"
+              value={form.department}
+              onChange={(event) => {
+                setForm((prev) => ({ ...prev, department: event.target.value }));
+                setFieldErrors(null);
+              }}
+            />
+            <FieldError field="department" errors={fieldErrors} />
+          </div>
+          <div>
+            <label className="label">Level</label>
+            <input
+              className="input"
+              value={form.level}
+              onChange={(event) => {
+                setForm((prev) => ({ ...prev, level: event.target.value }));
+                setFieldErrors(null);
+              }}
+            />
+            <FieldError field="level" errors={fieldErrors} />
+          </div>
+          <div>
+            <label className="label">CGPA</label>
+            <input
+              className="input"
+              type="number"
+              min={0}
+              max={5}
+              step="0.01"
+              value={form.cgpa}
+              onChange={(event) => {
+                setForm((prev) => ({ ...prev, cgpa: event.target.value }));
+                setFieldErrors(null);
+              }}
+            />
+            <FieldError field="cgpa" errors={fieldErrors} />
+          </div>
+          <div>
+            <label className="label">Current State</label>
+            <select
+              className="select"
+              value={form.currentState}
+              onChange={(event) => {
+                setForm((prev) => ({ ...prev, currentState: event.target.value }));
+                setFieldErrors(null);
+              }}
+            >
+              <option value="">Select state</option>
+              {NIGERIAN_STATES.map((state) => (
+                <option key={state} value={state}>
+                  {state.replaceAll("_", " ")}
+                </option>
+              ))}
+            </select>
+            <FieldError field="currentState" errors={fieldErrors} />
+          </div>
           </div>
 
           <div>

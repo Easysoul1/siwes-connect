@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { getCoordinatorAnalytics } from "@/lib/api";
 import { CoordinatorAnalytics } from "@/lib/types";
+import { StatsGridSkeleton } from "@/components/shared/Skeleton";
 
 export default function CoordinatorAnalyticsPage() {
   const { session } = useAuth();
@@ -31,13 +32,15 @@ export default function CoordinatorAnalyticsPage() {
       </p>
 
       {!analytics ? (
-        <p style={{ color: "#6B7280" }}>
-          {session?.accessToken
-            ? isPending
-              ? "Loading analytics..."
-              : message ?? "No analytics data available."
-            : "Sign in as coordinator to load analytics."}
-        </p>
+        session?.accessToken ? (
+          isPending ? (
+            <StatsGridSkeleton count={6} />
+          ) : (
+            <p style={{ color: "#6B7280" }}>{message ?? "No analytics data available."}</p>
+          )
+        ) : (
+          <p style={{ color: "#6B7280" }}>Sign in as coordinator to load analytics.</p>
+        )
       ) : (
         <>
           <section

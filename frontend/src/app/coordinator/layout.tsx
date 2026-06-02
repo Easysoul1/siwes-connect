@@ -1,5 +1,7 @@
 import { ReactNode } from "react";
 import { RolePortalShell } from "@/components/portal/RolePortalShell";
+import { RouteGuard } from "@/components/shared/RouteGuard";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 
 const links = [
   { href: "/coordinator/dashboard", label: "Dashboard" },
@@ -11,13 +13,17 @@ const links = [
 
 export default function CoordinatorLayout({ children }: { children: ReactNode }) {
   return (
-    <RolePortalShell
-      roleName="Coordinator"
-      heading="Coordinator Workspace"
-      subtitle="Oversee SIWES program health across organizations, students, and outcomes."
-      links={links}
-    >
-      {children}
-    </RolePortalShell>
+    <RouteGuard allowedRoles={["COORDINATOR"]}>
+      <ErrorBoundary>
+        <RolePortalShell
+          roleName="Coordinator"
+          heading="Coordinator Workspace"
+          subtitle="Oversee SIWES program health across organizations, students, and outcomes."
+          links={links}
+        >
+          {children}
+        </RolePortalShell>
+      </ErrorBoundary>
+    </RouteGuard>
   );
 }
