@@ -9,6 +9,10 @@ import {
   getPlacements
 } from "../controllers/placement.controller";
 import {
+  getOrganizationPublicPlacements,
+  listApprovedOrganizations
+} from "../controllers/organization.controller";
+import {
   deleteNotification,
   getNotifications,
   getUnreadCount,
@@ -18,12 +22,16 @@ import {
 import { uploadAvatar, uploadDocument, uploadResume } from "../controllers/upload.controller";
 
 export const placementRouter = Router();
+export const publicOrgRouter = Router();
 export const notificationRouter = Router();
 export const uploadRouter = Router();
 
 placementRouter.get("/", getPlacements);
 placementRouter.get("/:id", getPlacementById);
 placementRouter.get("/:id/organization", getPlacementOrganization);
+
+publicOrgRouter.get("/", listApprovedOrganizations);
+publicOrgRouter.get("/:id/placements", getOrganizationPublicPlacements);
 
 notificationRouter.use(authenticate);
 notificationRouter.get("/", getNotifications);

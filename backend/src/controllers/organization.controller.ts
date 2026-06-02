@@ -12,6 +12,21 @@ import { UploadService } from "../services/upload.service";
 import { NotificationService } from "../services/notification.service";
 import { parsePagination } from "../utils/pagination";
 
+const publicOrgSelect = {
+  id: true,
+  companyName: true,
+  slug: true,
+  description: true,
+  industry: true,
+  website: true,
+  logoUrl: true,
+  state: true,
+  address: true,
+  fields: true,
+  totalSlotsHosted: true,
+  rating: true
+} as const;
+
 const updateOrganizationSchema = z.object({
   companyName: z.string().trim().min(2)
 });
@@ -480,6 +495,58 @@ export async function getOrganizationDashboardStats(
         filledSlots: slots._sum.filledSlots ?? 0
       }
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listApprovedOrganizations(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const organizations = await prisma.organization.findMany({
+      where: { verificationStatus: VerificationStatus.APPROVED },
+      select: {
+        ...publicOrgSelect,
+        _count: { select: { placements: { where: { status: PlacementStatus.ACTIVE } } } }
+      },
+      orderBy: { companyName: "asc" }
+    });
+
+    res.json({ data: organizations });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getOrganizationPublicPlacements(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const org = await prisma.organization.findFirst({
+      where: { id: req.params.id, verificationStatus: VerificationStatus.APPROVED }
+    });
+    if (!org) throw new AppError(404, "Organization not found");
+
+    const placements = await prisma.placement.findMany({
+      where: {
+        organizationId: org.id,
+        status: PlacementStatus.ACTIVE,
+        applicationDeadline: { gte: new Date() }
+      },
+      include: {
+        organization: {
+          select: { id: true, companyName: true, verificationStatus: true, logoUrl: true }
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    res.json({ data: placements });
   } catch (error) {
     next(error);
   }

@@ -6,6 +6,7 @@ import { studentRouter } from "./student.routes";
 import {
   notificationRouter,
   placementRouter,
+  publicOrgRouter,
   uploadRouter
 } from "./module.routes";
 
@@ -33,3 +34,4 @@ router.use("/coordinator", coordinatorRouter);
 router.use("/placements", placementRouter);
 router.use("/notifications", notificationRouter);
 router.use("/uploads", uploadRouter);
+router.use("/directory/organizations", publicOrgRouter);

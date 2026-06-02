@@ -143,6 +143,32 @@ export async function getMatchedPlacements(req: Request, res: Response, next: Ne
   }
 }
 
+export async function getAllPlacements(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) throw new AppError(401, "Unauthorized");
+
+    const stateFilter = typeof req.query.state === "string" ? req.query.state : undefined;
+    const remoteOnly = req.query.remote === "true";
+
+    const placements = await prisma.placement.findMany({
+      where: {
+        status: PlacementStatus.ACTIVE,
+        applicationDeadline: { gte: new Date() },
+        ...(stateFilter ? { state: stateFilter } : {}),
+        ...(remoteOnly ? { isRemote: true } : {})
+      },
+      include: {
+        organization: { select: { id: true, companyName: true, verificationStatus: true, logoUrl: true } }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    res.json({ data: placements });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function getRecommendedPlacements(req: Request, res: Response, next: NextFunction) {
   try {
     if (!req.user) throw new AppError(401, "Unauthorized");
