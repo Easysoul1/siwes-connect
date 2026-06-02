@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmailService = void 0;
+exports.getLastEmailPreview = getLastEmailPreview;
 const mail_1 = __importDefault(require("@sendgrid/mail"));
 const env_1 = require("../config/env");
 const appUrl = env_1.env.APP_URL.replace(/\/$/, "");
@@ -36,9 +37,10 @@ function renderTemplate(params) {
   </body>
 </html>`;
 }
+let lastEmailPreview = null;
 async function sendMail(to, subject, html) {
     if (!isSendGridEnabled()) {
-        console.log(`[email-disabled] to=${to} subject="${subject}"`);
+        lastEmailPreview = { to, subject, html };
         return;
     }
     await mail_1.default.send({
@@ -50,6 +52,11 @@ async function sendMail(to, subject, html) {
         subject,
         html
     });
+}
+function getLastEmailPreview() {
+    const preview = lastEmailPreview;
+    lastEmailPreview = null;
+    return preview;
 }
 class EmailService {
     static async sendVerificationEmail(email, token) {

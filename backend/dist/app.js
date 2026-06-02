@@ -15,7 +15,7 @@ const routes_1 = require("./routes");
 exports.app = (0, express_1.default)();
 const allowedOrigin = env_1.env.FRONTEND_URL.replace(/\/$/, "");
 exports.app.use((0, cors_1.default)({
-    origin: [allowedOrigin, "http://localhost:3000"],
+    origin: [allowedOrigin, "http://localhost:3000", "http://localhost:3001"],
     credentials: true
 }));
 exports.app.use((0, helmet_1.default)());

@@ -1,11 +1,9 @@
 import bcrypt from "bcrypt";
-import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { UserRole } from "@prisma/client";
 import { prisma } from "../config/database";
 import { env } from "../config/env";
 import { AppError } from "../utils/errors";
-import { EmailService } from "./email.service";
 
 type RegisterBasePayload = {
   email: string;
@@ -87,21 +85,27 @@ export class AuthService {
         }
       });
 
-      const verificationToken = crypto.randomUUID();
-      await tx.emailVerificationToken.create({
-        data: {
-          token: verificationToken,
-          userId: user.id,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
-        }
-      });
-
-      return { user, student, verificationToken };
+      return { user, student };
     });
 
-    await EmailService.sendVerificationEmail(result.user.email, result.verificationToken);
+    const accessToken = signAccessToken(
+      { userId: result.user.id, role: result.user.role, type: "access" },
+      env.JWT_EXPIRES_IN
+    );
+    const refreshToken = signRefreshToken(
+      { userId: result.user.id, role: result.user.role, type: "refresh" },
+      env.JWT_REFRESH_EXPIRES_IN
+    );
+    const refreshExpiresAt = expiryDateFromNow(env.JWT_REFRESH_EXPIRES_IN);
+
+    await prisma.refreshToken.create({
+      data: { token: refreshToken, userId: result.user.id, expiresAt: refreshExpiresAt }
+    });
+
     return {
-      user: result.user,
+      accessToken,
+      refreshToken,
+      user: { id: result.user.id, email: result.user.email, role: result.user.role },
       student: result.student
     };
   }
@@ -124,21 +128,27 @@ export class AuthService {
         }
       });
 
-      const verificationToken = crypto.randomUUID();
-      await tx.emailVerificationToken.create({
-        data: {
-          token: verificationToken,
-          userId: user.id,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
-        }
-      });
-
-      return { user, organization, verificationToken };
+      return { user, organization };
     });
 
-    await EmailService.sendVerificationEmail(result.user.email, result.verificationToken);
+    const accessToken = signAccessToken(
+      { userId: result.user.id, role: result.user.role, type: "access" },
+      env.JWT_EXPIRES_IN
+    );
+    const refreshToken = signRefreshToken(
+      { userId: result.user.id, role: result.user.role, type: "refresh" },
+      env.JWT_REFRESH_EXPIRES_IN
+    );
+    const refreshExpiresAt = expiryDateFromNow(env.JWT_REFRESH_EXPIRES_IN);
+
+    await prisma.refreshToken.create({
+      data: { token: refreshToken, userId: result.user.id, expiresAt: refreshExpiresAt }
+    });
+
     return {
-      user: result.user,
+      accessToken,
+      refreshToken,
+      user: { id: result.user.id, email: result.user.email, role: result.user.role },
       organization: result.organization
     };
   }
@@ -158,21 +168,27 @@ export class AuthService {
         data: { userId: user.id, fullName: payload.fullName }
       });
 
-      const verificationToken = crypto.randomUUID();
-      await tx.emailVerificationToken.create({
-        data: {
-          token: verificationToken,
-          userId: user.id,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
-        }
-      });
-
-      return { user, coordinator, verificationToken };
+      return { user, coordinator };
     });
 
-    await EmailService.sendVerificationEmail(result.user.email, result.verificationToken);
+    const accessToken = signAccessToken(
+      { userId: result.user.id, role: result.user.role, type: "access" },
+      env.JWT_EXPIRES_IN
+    );
+    const refreshToken = signRefreshToken(
+      { userId: result.user.id, role: result.user.role, type: "refresh" },
+      env.JWT_REFRESH_EXPIRES_IN
+    );
+    const refreshExpiresAt = expiryDateFromNow(env.JWT_REFRESH_EXPIRES_IN);
+
+    await prisma.refreshToken.create({
+      data: { token: refreshToken, userId: result.user.id, expiresAt: refreshExpiresAt }
+    });
+
     return {
-      user: result.user,
+      accessToken,
+      refreshToken,
+      user: { id: result.user.id, email: result.user.email, role: result.user.role },
       coordinator: result.coordinator
     };
   }
@@ -181,7 +197,6 @@ export class AuthService {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) throw new AppError(401, "Invalid credentials");
     if (!user.isActive) throw new AppError(403, "Account is inactive");
-    if (!user.isEmailVerified) throw new AppError(403, "Please verify your email before login");
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) throw new AppError(401, "Invalid credentials");
@@ -227,7 +242,7 @@ export class AuthService {
       prisma.refreshToken.findUnique({ where: { token: refreshToken } }),
       prisma.user.findUnique({
         where: { id: payload.userId },
-        select: { id: true, email: true, role: true, isActive: true, isEmailVerified: true }
+        select: { id: true, email: true, role: true, isActive: true }
       })
     ]);
 
@@ -237,7 +252,7 @@ export class AuthService {
       throw new AppError(401, "Refresh token has expired");
     }
 
-    if (!user || !user.isActive || !user.isEmailVerified) {
+    if (!user || !user.isActive) {
       await prisma.refreshToken.delete({ where: { token: refreshToken } });
       throw new AppError(401, "Unauthorized");
     }
@@ -284,103 +299,4 @@ export class AuthService {
     await prisma.refreshToken.deleteMany({ where: { userId } });
   }
 
-  static async verifyEmail(token: string) {
-    const record = await prisma.emailVerificationToken.findUnique({
-      where: { token },
-      include: { user: true }
-    });
-
-    if (!record || record.used) {
-      throw new AppError(400, "Invalid verification token");
-    }
-    if (record.expiresAt < new Date()) {
-      throw new AppError(400, "Verification token has expired");
-    }
-
-    const [user] = await prisma.$transaction([
-      prisma.user.update({
-        where: { id: record.userId },
-        data: { isEmailVerified: true },
-        select: { id: true, email: true, role: true }
-      }),
-      prisma.emailVerificationToken.update({
-        where: { id: record.id },
-        data: { used: true }
-      })
-    ]);
-
-    const accessToken = signAccessToken(
-      { userId: user.id, role: user.role, type: "access" },
-      env.JWT_EXPIRES_IN
-    );
-    const refreshToken = signRefreshToken(
-      { userId: user.id, role: user.role, type: "refresh" },
-      env.JWT_REFRESH_EXPIRES_IN
-    );
-    const refreshExpiresAt = expiryDateFromNow(env.JWT_REFRESH_EXPIRES_IN);
-
-    await prisma.refreshToken.create({
-      data: {
-        token: refreshToken,
-        userId: user.id,
-        expiresAt: refreshExpiresAt
-      }
-    });
-
-    return {
-      accessToken,
-      refreshToken,
-      user
-    };
-  }
-
-  static async forgotPassword(email: string) {
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true, email: true, isActive: true }
-    });
-
-    if (!user || !user.isActive) {
-      return;
-    }
-
-    const token = crypto.randomUUID();
-    await prisma.passwordReset.create({
-      data: {
-        token,
-        userId: user.id,
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000)
-      }
-    });
-
-    await EmailService.sendPasswordResetEmail(email, token);
-  }
-
-  static async resetPassword(token: string, password: string) {
-    const record = await prisma.passwordReset.findUnique({
-      where: { token }
-    });
-
-    if (!record || record.used) {
-      throw new AppError(400, "Invalid reset token");
-    }
-    if (record.expiresAt < new Date()) {
-      throw new AppError(400, "Reset token has expired");
-    }
-
-    const passwordHash = await bcrypt.hash(password, 12);
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: record.userId },
-        data: { password: passwordHash }
-      }),
-      prisma.passwordReset.update({
-        where: { id: record.id },
-        data: { used: true }
-      }),
-      prisma.refreshToken.deleteMany({
-        where: { userId: record.userId }
-      })
-    ]);
-  }
 }

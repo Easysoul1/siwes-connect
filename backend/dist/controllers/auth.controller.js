@@ -124,9 +124,10 @@ async function verifyEmail(req, res, next) {
 async function forgotPassword(req, res, next) {
     try {
         const payload = forgotPasswordSchema.parse(req.body);
-        await auth_service_1.AuthService.forgotPassword(payload.email);
+        const result = await auth_service_1.AuthService.forgotPassword(payload.email);
         res.status(200).json({
-            message: "If the account exists, a password reset link has been sent"
+            message: "If the account exists, a password reset link has been sent",
+            emailPreview: result.emailPreview
         });
     }
     catch (error) {

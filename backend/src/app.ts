@@ -13,7 +13,7 @@ const allowedOrigin = env.FRONTEND_URL.replace(/\/$/, "");
 
 app.use(
   cors({
-    origin: [allowedOrigin, "http://localhost:3000"],
+    origin: [allowedOrigin, "http://localhost:3000", "http://localhost:3001"],
     credentials: true
   })
 );

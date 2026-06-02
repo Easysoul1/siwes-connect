@@ -122,7 +122,6 @@ model User {
   email              String                   @unique
   password           String
   role               UserRole
-  isEmailVerified    Boolean                  @default(false)
   isActive           Boolean                  @default(true)
   createdAt          DateTime                 @default(now())
   updatedAt          DateTime                 @updatedAt
@@ -131,8 +130,6 @@ model User {
   coordinator        Coordinator?
   notifications      Notification[]
   refreshTokens      RefreshToken[]
-  passwordResets     PasswordReset[]
-  emailVerifications EmailVerificationToken[]
 }
 
 model Student {
@@ -294,26 +291,6 @@ model RefreshToken {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
-  createdAt DateTime @default(now())
-}
-
-model PasswordReset {
-  id        String   @id @default(cuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  used      Boolean  @default(false)
-  createdAt DateTime @default(now())
-}
-
-model EmailVerificationToken {
-  id        String   @id @default(cuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  used      Boolean  @default(false)
   createdAt DateTime @default(now())
 }
 

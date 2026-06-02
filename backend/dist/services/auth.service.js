@@ -69,7 +69,8 @@ class AuthService {
         await email_service_1.EmailService.sendVerificationEmail(result.user.email, result.verificationToken);
         return {
             user: result.user,
-            student: result.student
+            student: result.student,
+            emailPreview: (0, email_service_1.getLastEmailPreview)()
         };
     }
     static async registerOrganization(payload) {
@@ -101,7 +102,8 @@ class AuthService {
         await email_service_1.EmailService.sendVerificationEmail(result.user.email, result.verificationToken);
         return {
             user: result.user,
-            organization: result.organization
+            organization: result.organization,
+            emailPreview: (0, email_service_1.getLastEmailPreview)()
         };
     }
     static async registerCoordinator(payload) {
@@ -130,7 +132,8 @@ class AuthService {
         await email_service_1.EmailService.sendVerificationEmail(result.user.email, result.verificationToken);
         return {
             user: result.user,
-            coordinator: result.coordinator
+            coordinator: result.coordinator,
+            emailPreview: (0, email_service_1.getLastEmailPreview)()
         };
     }
     static async login(email, password) {
@@ -263,7 +266,7 @@ class AuthService {
             select: { id: true, email: true, isActive: true }
         });
         if (!user || !user.isActive) {
-            return;
+            return { emailPreview: null };
         }
         const token = crypto_1.default.randomUUID();
         await database_1.prisma.passwordReset.create({
@@ -274,6 +277,7 @@ class AuthService {
             }
         });
         await email_service_1.EmailService.sendPasswordResetEmail(email, token);
+        return { emailPreview: (0, email_service_1.getLastEmailPreview)() };
     }
     static async resetPassword(token, password) {
         const record = await database_1.prisma.passwordReset.findUnique({

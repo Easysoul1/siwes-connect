@@ -39,24 +39,11 @@ const refreshSchema = z.object({
   refreshToken: z.string().min(16)
 });
 
-const verifyEmailSchema = z.object({
-  token: z.string().min(16)
-});
-
-const forgotPasswordSchema = z.object({
-  email: z.string().email()
-});
-
-const resetPasswordSchema = z.object({
-  token: z.string().min(16),
-  password: z.string().min(8)
-});
-
 export async function registerStudent(req: Request, res: Response, next: NextFunction) {
   try {
     const payload = studentRegistrationSchema.parse(req.body);
     const result = await AuthService.registerStudent(payload);
-    res.status(201).json({ message: "Student registration successful", data: result });
+    res.status(201).json({ message: "Student registration successful", ...result });
   } catch (error) {
     next(error);
   }
@@ -66,7 +53,7 @@ export async function registerOrganization(req: Request, res: Response, next: Ne
   try {
     const payload = organizationRegistrationSchema.parse(req.body);
     const result = await AuthService.registerOrganization(payload);
-    res.status(201).json({ message: "Organization registration successful", data: result });
+    res.status(201).json({ message: "Organization registration successful", ...result });
   } catch (error) {
     next(error);
   }
@@ -84,7 +71,7 @@ export async function registerCoordinator(req: Request, res: Response, next: Nex
       password: payload.password,
       fullName: payload.fullName
     });
-    res.status(201).json({ message: "Coordinator registration successful", data: result });
+    res.status(201).json({ message: "Coordinator registration successful", ...result });
   } catch (error) {
     next(error);
   }
@@ -105,38 +92,6 @@ export async function refresh(req: Request, res: Response, next: NextFunction) {
     const payload = refreshSchema.parse(req.body);
     const result = await AuthService.refresh(payload.refreshToken);
     res.status(200).json(result);
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function verifyEmail(req: Request, res: Response, next: NextFunction) {
-  try {
-    const payload = verifyEmailSchema.parse(req.body);
-    const result = await AuthService.verifyEmail(payload.token);
-    res.status(200).json({ message: "Email verified successfully", ...result });
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function forgotPassword(req: Request, res: Response, next: NextFunction) {
-  try {
-    const payload = forgotPasswordSchema.parse(req.body);
-    await AuthService.forgotPassword(payload.email);
-    res.status(200).json({
-      message: "If the account exists, a password reset link has been sent"
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function resetPassword(req: Request, res: Response, next: NextFunction) {
-  try {
-    const payload = resetPasswordSchema.parse(req.body);
-    await AuthService.resetPassword(payload.token, payload.password);
-    res.status(200).json({ message: "Password reset successful" });
   } catch (error) {
     next(error);
   }
