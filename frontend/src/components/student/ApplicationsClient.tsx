@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { ApplicationItem } from "@/lib/types";
 import { withdrawApplication } from "@/lib/api";
@@ -12,6 +12,7 @@ type Props = {
 
 export function ApplicationsClient({ initialApplications, token }: Props) {
   const [applications, setApplications] = useState(initialApplications);
+  useEffect(() => setApplications(initialApplications), [initialApplications]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
