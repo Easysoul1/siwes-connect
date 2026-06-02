@@ -41,6 +41,65 @@ async function main() {
     console.log(`  OK   ${inst.shortName}`);
   }
 
+  console.log("\nSeeding test coordinator...");
+  const existingCoord = await prisma.user.findUnique({ where: { email: "coordinator@siwes.edu" } });
+  if (!existingCoord) {
+    const oau = await prisma.institution.findFirst({ where: { shortName: "OAU" } });
+    const coordHash = await bcrypt.hash(PASSWORD, 12);
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email: "coordinator@siwes.edu",
+          password: coordHash,
+          role: UserRole.COORDINATOR,
+          isActive: true
+        }
+      });
+      await tx.coordinator.create({
+        data: {
+          userId: user.id,
+          fullName: "Dr. Funke Adebayo",
+          institutionId: oau?.id ?? null
+        }
+      });
+    });
+    console.log(`  OK   Dr. Funke Adebayo — coordinator@siwes.edu / ${PASSWORD}`);
+  } else {
+    console.log("  SKIP coordinator@siwes.edu — already exists");
+  }
+
+  console.log("\nSeeding test student...");
+  const existingStudent = await prisma.user.findUnique({ where: { email: "student@siwes.edu" } });
+  if (!existingStudent) {
+    const unilag = await prisma.institution.findFirst({ where: { shortName: "UNILAG" } });
+    const studentHash = await bcrypt.hash(PASSWORD, 12);
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email: "student@siwes.edu",
+          password: studentHash,
+          role: UserRole.STUDENT,
+          isActive: true
+        }
+      });
+      await tx.student.create({
+        data: {
+          userId: user.id,
+          firstName: "Michael",
+          lastName: "Okonkwo",
+          department: "Computer Science",
+          level: "500",
+          currentState: "Lagos",
+          institutionId: unilag?.id ?? null,
+          studyField: "COMPUTER_SCIENCE"
+        }
+      });
+    });
+    console.log(`  OK   Michael Okonkwo — student@siwes.edu / ${PASSWORD}`);
+  } else {
+    console.log("  SKIP student@siwes.edu — already exists");
+  }
+
   console.log("\nSeeding organizations...");
   const hash = await bcrypt.hash(PASSWORD, 12);
   for (const org of organizations) {
