@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "echo \"Tests to be implemented\""
+    "test": "echo \"Tests to be implemented\"",
+    "dev": "next dev -p 3001"
   },
   "dependencies": {
     "@gsap/react": "^2.1.1",
@@ -15,7 +15,8 @@
     "lucide-react": "^0.511.0",
     "next": "^14.2.5",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",

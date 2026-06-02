@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { NotificationBell } from "@/components/shared/NotificationBell";
 
 type NavLink = {
   href: string;
@@ -53,6 +54,7 @@ export function RolePortalShell({
             <p>{subtitle}</p>
           </div>
           <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+            <NotificationBell />
             <span style={{ color: "#4B5563", fontSize: "0.9rem" }}>
               {session?.user.email ?? "Guest"}
             </span>

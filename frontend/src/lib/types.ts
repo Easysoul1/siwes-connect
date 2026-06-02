@@ -143,3 +143,24 @@ export type CoordinatorAnnouncement = {
   createdAt: string;
   recipients: number;
 };
+
+export type NotificationItem = {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  data?: Record<string, unknown>;
+  isRead: boolean;
+  createdAt: string;
+};
+
+export type NotificationsResponse = {
+  data: NotificationItem[];
+  unreadCount: number;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};

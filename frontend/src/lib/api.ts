@@ -6,6 +6,8 @@ import {
   CoordinatorOverviewStats,
   CoordinatorStudentDetail,
   CoordinatorStudent,
+  NotificationItem,
+  NotificationsResponse,
   OrganizationDashboardStats,
   OrganizationProfile,
   OrganizationSummary,
@@ -14,6 +16,7 @@ import {
   StudentDashboardStats,
   StudentProfile
 } from "./types";
+import { clearSession, readSession, updateAccessToken } from "./session";
 
 let envApiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
 if (!envApiUrl.endsWith("/api/v1")) {
@@ -58,15 +61,47 @@ async function publicRequest<T>(path: string, init?: RequestInit) {
 }
 
 async function authRequest<T>(path: string, token: string, init?: RequestInit) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-      Authorization: `Bearer ${token}`
-    },
-    cache: "no-store"
-  });
+  const url = `${API_BASE_URL}${path}`;
+  const makeRequest = (accessToken: string) =>
+    fetch(url, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {}),
+        Authorization: `Bearer ${accessToken}`
+      },
+      cache: "no-store"
+    });
+
+  let response = await makeRequest(token);
+
+  if (response.status === 401) {
+    const session = readSession();
+    if (session?.refreshToken) {
+      try {
+        const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken: session.refreshToken })
+        });
+
+        if (refreshRes.ok) {
+          const tokens = (await refreshRes.json()) as { accessToken: string; refreshToken: string };
+          updateAccessToken(tokens.accessToken);
+          response = await makeRequest(tokens.accessToken);
+        } else {
+          clearSession();
+          window.location.replace("/login");
+          throw new Error("Session expired");
+        }
+      } catch {
+        clearSession();
+        window.location.replace("/login");
+        throw new Error("Session expired");
+      }
+    }
+  }
+
   return parseResponse<T>(response);
 }
 
@@ -107,7 +142,7 @@ export async function registerStudent(payload: {
   currentState: string;
   preferredStates: string[];
 }) {
-  return publicRequest<{ message: string }>("/auth/register/student", {
+  return publicRequest<AuthTokens>("/auth/register/student", {
     method: "POST",
     body: JSON.stringify(payload)
   });
@@ -118,7 +153,7 @@ export async function registerOrganization(payload: {
   password: string;
   companyName: string;
 }) {
-  return publicRequest<{ message: string }>("/auth/register/organization", {
+  return publicRequest<AuthTokens>("/auth/register/organization", {
     method: "POST",
     body: JSON.stringify(payload)
   });
@@ -130,30 +165,9 @@ export async function registerCoordinator(payload: {
   fullName: string;
   inviteCode: string;
 }) {
-  return publicRequest<{ message: string }>("/auth/register/coordinator", {
+  return publicRequest<AuthTokens>("/auth/register/coordinator", {
     method: "POST",
     body: JSON.stringify(payload)
-  });
-}
-
-export async function verifyEmailToken(token: string): Promise<AuthTokens> {
-  return publicRequest<AuthTokens>("/auth/verify-email", {
-    method: "POST",
-    body: JSON.stringify({ token })
-  });
-}
-
-export async function forgotPassword(email: string) {
-  return publicRequest<{ message: string }>("/auth/forgot-password", {
-    method: "POST",
-    body: JSON.stringify({ email })
-  });
-}
-
-export async function resetPassword(token: string, password: string) {
-  return publicRequest<{ message: string }>("/auth/reset-password", {
-    method: "POST",
-    body: JSON.stringify({ token, password })
   });
 }
 
@@ -511,4 +525,35 @@ export async function deleteAnnouncement(token: string, id: string) {
   return authRequest<{ message: string }>(`/coordinator/announcements/${id}`, token, {
     method: "DELETE"
   });
+}
+
+export async function getNotifications(
+  token: string,
+  page = 1
+): Promise<NotificationsResponse> {
+  return authRequest<NotificationsResponse>(
+    `/notifications?page=${page}`,
+    token
+  );
+}
+
+export async function markNotificationRead(token: string, id: string) {
+  return authRequest<{ message: string }>(`/notifications/${id}/read`, token, {
+    method: "PATCH"
+  });
+}
+
+export async function deleteNotification(token: string, id: string) {
+  return authRequest<{ message: string }>(`/notifications/${id}`, token, {
+    method: "DELETE"
+  });
+}
+
+export async function getUnreadNotificationCount(
+  token: string
+): Promise<{ unreadCount: number }> {
+  return authRequest<{ data: { unreadCount: number } }>(
+    "/notifications/unread-count",
+    token
+  ).then((res) => res.data);
 }

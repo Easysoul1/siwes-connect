@@ -35,3 +35,14 @@ export function clearSession() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(KEY);
 }
+
+export function updateAccessToken(newToken: string) {
+  if (typeof window === "undefined") return;
+  const raw = window.localStorage.getItem(KEY);
+  if (!raw) return;
+  try {
+    const session = JSON.parse(raw) as SessionState;
+    session.accessToken = newToken;
+    window.localStorage.setItem(KEY, JSON.stringify(session));
+  } catch {}  // eslint-disable-line no-empty
+}
