@@ -22,11 +22,11 @@ const institutions = [
 ];
 
 const organizations = [
-  { email: "info@techinnovate.ng",      companyName: "TechInnovate Nigeria Ltd",       industry: "Technology",         state: "Lagos",         website: "https://techinnovate.ng" },
-  { email: "hr@greenfield.ng",          companyName: "Greenfield Engineering Ltd",     industry: "Engineering",        state: "Abuja",         website: "https://greenfield.ng" },
-  { email: "contact@medcare.ng",        companyName: "MedCare Health Services",        industry: "Healthcare",         state: "Ibadan",        website: "https://medcare.ng" },
-  { email: "admin@agroplus.ng",         companyName: "AgroPlus Integrated Farms",      industry: "Agriculture",        state: "Kaduna",        website: "https://agroplus.ng" },
-  { email: "hello@primebank.ng",        companyName: "Prime Bank & Financial Services", industry: "Banking & Finance",   state: "Port Harcourt", website: "https://primebank.ng" }
+  { email: "info@techinnovate.ng", companyName: "TechInnovate Nigeria Ltd", industry: "Technology", state: "Lagos", website: "https://techinnovate.ng" },
+  { email: "hr@greenfield.ng", companyName: "Greenfield Engineering Ltd", industry: "Engineering", state: "Abuja", website: "https://greenfield.ng" },
+  { email: "contact@medcare.ng", companyName: "MedCare Health Services", industry: "Healthcare", state: "Ibadan", website: "https://medcare.ng" },
+  { email: "admin@agroplus.ng", companyName: "AgroPlus Integrated Farms", industry: "Agriculture", state: "Kaduna", website: "https://agroplus.ng" },
+  { email: "hello@primebank.ng", companyName: "Prime Bank & Financial Services", industry: "Banking & Finance", state: "Port Harcourt", website: "https://primebank.ng" }
 ];
 
 async function main() {

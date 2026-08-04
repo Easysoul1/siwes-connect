@@ -1,0 +1,68 @@
+SIWES API running on port 5000
+Error: SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at parse (C:\Users\EBUKA GADGET\Desktop\siwes-connect\node_modules\body-parser\lib\types\json.js:96:19)
+    at C:\Users\EBUKA GADGET\Desktop\siwes-connect\node_modules\body-parser\lib\read.js:128:18
+    at AsyncResource.runInAsyncScope (node:async_hooks:227:14)
+    at invokeCallback (C:\Users\EBUKA GADGET\Desktop\siwes-connect\node_modules\raw-body\index.js:238:16)
+    at done (C:\Users\EBUKA GADGET\Desktop\siwes-connect\node_modules\raw-body\index.js:227:7)
+    at IncomingMessage.onEnd (C:\Users\EBUKA GADGET\Desktop\siwes-connect\node_modules\raw-body\index.js:287:7)
+    at IncomingMessage.emit (node:events:509:28)
+    at endReadableNT (node:internal/streams/readable:1735:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  expose: true,
+  statusCode: 400,
+  status: 400,
+  body: '{email:contact@medcare.ng,password:Password123!}',
+  type: 'entity.parse.failed'
+}
+Error: PrismaClientKnownRequestError: 
+Invalid `prisma.refreshToken.delete()` invocation in
+C:\Users\EBUKA GADGET\Desktop\siwes-connect\backend\src\services\auth.service.ts:271:27
+
+  268 const refreshExpiresAt = expiryDateFromNow(env.JWT_REFRESH_EXPIRES_IN);
+  269 
+  270 await prisma.$transaction([
+→ 271   prisma.refreshToken.delete(
+An operation failed because it depends on one or more records that were required but not found. Record to delete does not exist.
+    at $n.handleRequestError (C:\Users\EBUKA GADGET\Desktop\siwes-connect\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\EBUKA GADGET\Desktop\siwes-connect\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\EBUKA GADGET\Desktop\siwes-connect\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\EBUKA GADGET\Desktop\siwes-connect\node_modules\@prisma\client\runtime\library.js:130:9633) {
+  code: 'P2025',
+  clientVersion: '5.22.0',
+  meta: {
+    modelName: 'RefreshToken',
+    cause: 'Record to delete does not exist.'
+  }
+}
+Error: AppError: Invalid refresh token
+    at AuthService.refresh (C:\Users\EBUKA GADGET\Desktop\siwes-connect\backend\src\services\auth.service.ts:249:29)
+    at async refresh (C:\Users\EBUKA GADGET\Desktop\siwes-connect\backend\src\controllers\auth.controller.ts:93:20) {
+  statusCode: 401
+}
+Error: PrismaClientKnownRequestError: 
+Invalid `prisma.refreshToken.delete()` invocation in
+C:\Users\EBUKA GADGET\Desktop\siwes-connect\backend\src\services\auth.service.ts:271:27
+
+  268 const refreshExpiresAt = expiryDateFromNow(env.JWT_REFRESH_EXPIRES_IN);
+  269 
+  270 await prisma.$transaction([
+→ 271   prisma.refreshToken.delete(
+An operation failed because it depends on one or more records that were required but not found. Record to delete does not exist.
+    at $n.handleRequestError (C:\Users\EBUKA GADGET\Desktop\siwes-connect\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\EBUKA GADGET\Desktop\siwes-connect\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\EBUKA GADGET\Desktop\siwes-connect\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\EBUKA GADGET\Desktop\siwes-connect\node_modules\@prisma\client\runtime\library.js:130:9633) {
+  code: 'P2025',
+  clientVersion: '5.22.0',
+  meta: {
+    modelName: 'RefreshToken',
+    cause: 'Record to delete does not exist.'
+  }
+}
+Error: AppError: Invalid refresh token
+    at AuthService.refresh (C:\Users\EBUKA GADGET\Desktop\siwes-connect\backend\src\services\auth.service.ts:249:29)
+    at async refresh (C:\Users\EBUKA GADGET\Desktop\siwes-connect\backend\src\controllers\auth.controller.ts:93:20) {
+  statusCode: 401
+}

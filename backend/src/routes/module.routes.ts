@@ -35,10 +35,10 @@ publicOrgRouter.get("/:id/placements", getOrganizationPublicPlacements);
 
 notificationRouter.use(authenticate);
 notificationRouter.get("/", getNotifications);
-notificationRouter.patch("/:id/read", markNotificationAsRead);
-notificationRouter.patch("/read-all", markAllNotificationsAsRead);
-notificationRouter.delete("/:id", deleteNotification);
 notificationRouter.get("/unread-count", getUnreadCount);
+notificationRouter.patch("/read-all", markAllNotificationsAsRead);
+notificationRouter.patch("/:id/read", markNotificationAsRead);
+notificationRouter.delete("/:id", deleteNotification);
 
 uploadRouter.post(
   "/resume",
