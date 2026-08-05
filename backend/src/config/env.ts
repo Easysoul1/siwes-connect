@@ -9,9 +9,7 @@ const schema = z.object({
   JWT_SECRET: isProduction
     ? z.string().min(32)
     : z.string().min(32).default("change-this-super-secret-jwt-key-32-chars"),
-  JWT_REFRESH_SECRET: isProduction
-    ? z.string().min(32)
-    : z.string().min(32).default("change-this-refresh-secret-key-32-chars"),
+  JWT_REFRESH_SECRET: z.string().min(32).optional(),
   JWT_EXPIRES_IN: z.string().default("15m"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
   DATABASE_URL: z.string().default("postgresql://siwes:siwes123@localhost:5432/siwes_connect"),
@@ -26,4 +24,9 @@ const schema = z.object({
   CLOUDINARY_API_SECRET: z.string().optional()
 });
 
-export const env = schema.parse(process.env);
+const parsed = schema.parse(process.env);
+
+export const env = {
+  ...parsed,
+  JWT_REFRESH_SECRET: parsed.JWT_REFRESH_SECRET ?? parsed.JWT_SECRET
+};
