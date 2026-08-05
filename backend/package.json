@@ -7,9 +7,10 @@
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc -p tsconfig.json",
     "start": "node dist/server.js",
+    "migrate": "prisma migrate deploy",
+    "seed": "tsx src/scripts/seed.ts",
     "users": "tsx src/scripts/getAllUsers.ts",
     "users:json": "tsx src/scripts/getAllUsers.ts --json",
-    "seed": "tsx src/scripts/seed.ts",
     "lint": "eslint src --ext .ts 2>/dev/null || echo \"ESLint not configured, skipping\"",
     "test": "echo \"Tests to be implemented\""
   },
