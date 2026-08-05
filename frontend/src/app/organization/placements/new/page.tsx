@@ -1,17 +1,18 @@
 "use client";
 
-import { FormEvent, useState, useTransition } from "react";
+import { FormEvent, useCallback, useState, useTransition } from "react";
 import Link from "next/link";
 import { createPlacement } from "@/lib/api";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { NIGERIAN_STATES } from "@/shared/constants/states";
+import Toast from "@/components/shared/Toast";
 
 const steps = ["Basic Info", "Requirements", "Slots & Timeline", "Location", "Compensation", "Review"];
 
 export default function NewPlacementPage() {
   const { session } = useAuth();
   const [step, setStep] = useState(0);
-  const [message, setMessage] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState({
     title: "",
@@ -32,27 +33,46 @@ export default function NewPlacementPage() {
     stipendAmount: ""
   });
 
+  const dismissToast = useCallback(() => setToastMsg(null), []);
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!session?.accessToken) {
-      setMessage("Sign in as organization to create placements.");
+      setToastMsg({ message: "Sign in as organization to create placements.", type: "error" });
       return;
     }
+
+    if (!form.title.trim()) { setToastMsg({ message: "Title is required.", type: "error" }); return; }
+    if (form.description.trim().length < 20) { setToastMsg({ message: "Description must be at least 20 characters.", type: "error" }); return; }
+    if (!form.totalSlots || Number(form.totalSlots) < 1) { setToastMsg({ message: "Total slots must be at least 1.", type: "error" }); return; }
+    if (!form.deadline) { setToastMsg({ message: "Application deadline is required.", type: "error" }); return; }
+    if (!form.state) { setToastMsg({ message: "State is required.", type: "error" }); return; }
+
+    const deadlineDate = new Date(form.deadline);
+    if (isNaN(deadlineDate.getTime())) { setToastMsg({ message: "Invalid deadline date.", type: "error" }); return; }
 
     startTransition(async () => {
       try {
         await createPlacement(session.accessToken, {
-          title: form.title,
-          description: form.description,
+          title: form.title.trim(),
+          description: form.description.trim(),
           requiredDepartment: form.requiredDepartment || undefined,
           totalSlots: Number(form.totalSlots),
           state: form.state,
-          applicationDeadline: new Date(form.deadline).toISOString(),
-          isRemote: form.remote
+          applicationDeadline: deadlineDate.toISOString(),
+          isRemote: form.remote,
+          responsibilities: form.responsibilities ? form.responsibilities.split("\n").filter(Boolean) : [],
+          requirements: form.requirements ? form.requirements.split("\n").filter(Boolean) : [],
+          minimumLevel: form.level || undefined,
+          minimumCGPA: form.cgpa ? Number(form.cgpa) : undefined,
+          durationWeeks: form.durationWeeks ? Number(form.durationWeeks) : undefined,
+          startDate: form.startDate ? new Date(form.startDate).toISOString() : undefined,
+          hasStipend: form.hasStipend,
+          stipendAmount: form.stipendAmount ? Number(form.stipendAmount) : undefined
         });
-        setMessage("Placement created successfully.");
+        setToastMsg({ message: "Placement published successfully.", type: "success" });
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Unable to create placement");
+        setToastMsg({ message: error instanceof Error ? error.message : "Unable to create placement", type: "error" });
       }
     });
   }
@@ -71,12 +91,12 @@ export default function NewPlacementPage() {
           {step === 0 ? (
             <div className="form-grid">
               <div>
-                <label className="label">Title</label>
-                <input className="input" value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} />
+                <label className="label">Title <span style={{ color: "#EF4444" }}>*</span></label>
+                <input className="input" value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} placeholder="e.g. Software Developer Intern" />
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
-                <label className="label">Description</label>
-                <textarea className="textarea" value={form.description} onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} />
+                <label className="label">Description <span style={{ color: "#EF4444" }}>*</span></label>
+                <textarea className="textarea" value={form.description} onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} placeholder="Describe the role, what the intern will learn and work on (min 20 characters)" />
               </div>
             </div>
           ) : null}
@@ -109,7 +129,7 @@ export default function NewPlacementPage() {
           {step === 2 ? (
             <div className="form-grid">
               <div>
-                <label className="label">Total Slots</label>
+                <label className="label">Total Slots <span style={{ color: "#EF4444" }}>*</span></label>
                 <input className="input" type="number" min={1} value={form.totalSlots} onChange={(event) => setForm((prev) => ({ ...prev, totalSlots: event.target.value }))} />
               </div>
               <div>
@@ -118,10 +138,10 @@ export default function NewPlacementPage() {
               </div>
               <div>
                 <label className="label">Duration (weeks)</label>
-                <input className="input" type="number" value={form.durationWeeks} onChange={(event) => setForm((prev) => ({ ...prev, durationWeeks: event.target.value }))} />
+                <input className="input" type="number" min={1} value={form.durationWeeks} onChange={(event) => setForm((prev) => ({ ...prev, durationWeeks: event.target.value }))} />
               </div>
               <div>
-                <label className="label">Application Deadline</label>
+                <label className="label">Application Deadline <span style={{ color: "#EF4444" }}>*</span></label>
                 <input className="input" type="date" value={form.deadline} onChange={(event) => setForm((prev) => ({ ...prev, deadline: event.target.value }))} />
               </div>
             </div>
@@ -130,7 +150,7 @@ export default function NewPlacementPage() {
           {step === 3 ? (
             <div className="form-grid">
               <div>
-                <label className="label">State</label>
+                <label className="label">State <span style={{ color: "#EF4444" }}>*</span></label>
                 <select className="select" value={form.state} onChange={(event) => setForm((prev) => ({ ...prev, state: event.target.value }))}>
                   <option value="">Select state</option>
                   {NIGERIAN_STATES.map((state) => (
@@ -198,9 +218,9 @@ export default function NewPlacementPage() {
             )}
           </div>
         </form>
-
-        {message ? <p style={{ marginBottom: 0, color: "#4B5563" }}>{message}</p> : null}
       </section>
+
+      {toastMsg ? <Toast message={toastMsg.message} type={toastMsg.type} onDismiss={dismissToast} /> : null}
     </main>
   );
 }

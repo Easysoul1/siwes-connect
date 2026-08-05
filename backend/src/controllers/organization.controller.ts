@@ -38,7 +38,16 @@ const createPlacementSchema = z.object({
   state: z.string().min(2),
   isRemote: z.boolean().default(false),
   totalSlots: z.number().int().positive(),
-  applicationDeadline: z.string().datetime()
+  applicationDeadline: z.string().datetime(),
+  responsibilities: z.array(z.string()).optional().default([]),
+  requirements: z.array(z.string()).optional().default([]),
+  minimumLevel: z.string().optional(),
+  minimumCGPA: z.number().min(0).max(5).optional(),
+  durationWeeks: z.number().int().positive().optional(),
+  startDate: z.string().datetime().optional(),
+  hasStipend: z.boolean().optional().default(false),
+  stipendAmount: z.number().optional(),
+  stipendCurrency: z.string().optional().default("NGN")
 });
 
 const updatePlacementSchema = createPlacementSchema.partial();
@@ -204,7 +213,16 @@ export async function createPlacement(req: Request, res: Response, next: NextFun
         isRemote: payload.isRemote,
         totalSlots: payload.totalSlots,
         applicationDeadline: new Date(payload.applicationDeadline),
-        status: PlacementStatus.DRAFT
+        responsibilities: payload.responsibilities,
+        requirements: payload.requirements,
+        minimumLevel: payload.minimumLevel,
+        minimumCGPA: payload.minimumCGPA,
+        durationWeeks: payload.durationWeeks,
+        startDate: payload.startDate ? new Date(payload.startDate) : undefined,
+        hasStipend: payload.hasStipend,
+        stipendAmount: payload.stipendAmount,
+        stipendCurrency: payload.stipendCurrency,
+        status: PlacementStatus.ACTIVE
       }
     });
 

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { ApplicationItem } from "@/lib/types";
 import { withdrawApplication } from "@/lib/api";
+import Toast from "@/components/shared/Toast";
 
 type Props = {
   initialApplications: ApplicationItem[];
@@ -13,12 +14,13 @@ type Props = {
 export function ApplicationsClient({ initialApplications, token }: Props) {
   const [applications, setApplications] = useState(initialApplications);
   useEffect(() => setApplications(initialApplications), [initialApplications]);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [isPending, startTransition] = useTransition();
+  const dismissToast = useCallback(() => setToastMsg(null), []);
 
   function handleWithdraw(applicationId: string) {
     if (!token) {
-      setFeedback("Sign in as student to withdraw applications.");
+      setToastMsg({ message: "Sign in as student to withdraw applications.", type: "error" });
       return;
     }
 
@@ -30,9 +32,9 @@ export function ApplicationsClient({ initialApplications, token }: Props) {
             item.id === applicationId ? { ...item, status: "WITHDRAWN" } : item
           )
         );
-        setFeedback("Application withdrawn.");
+        setToastMsg({ message: "Application withdrawn.", type: "success" });
       } catch (error) {
-        setFeedback(error instanceof Error ? error.message : "Unable to withdraw application.");
+        setToastMsg({ message: error instanceof Error ? error.message : "Unable to withdraw application.", type: "error" });
       }
     });
   }
@@ -43,7 +45,6 @@ export function ApplicationsClient({ initialApplications, token }: Props) {
       <p style={{ marginTop: 0, color: "#4B5563" }}>
         Track all submitted applications and withdraw eligible ones.
       </p>
-      {feedback ? <p style={{ color: "#4B5563" }}>{feedback}</p> : null}
 
       <section style={{ display: "grid", gap: 10 }}>
         {applications.map((item) => {
@@ -101,6 +102,8 @@ export function ApplicationsClient({ initialApplications, token }: Props) {
           </p>
         ) : null}
       </section>
+
+      {toastMsg ? <Toast message={toastMsg.message} type={toastMsg.type} onDismiss={dismissToast} /> : null}
     </main>
   );
 }

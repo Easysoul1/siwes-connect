@@ -1,423 +1,292 @@
-# SIWES Connect Deployment Guide
+# SIWES Connect — Setup, Fixes & Deployment Guide
 
-## Pre-Deployment Checklist
+## Overview
 
-- [ ] Database configured (PostgreSQL 13+)
-- [ ] Environment variables filled in
-- [ ] Third-party services configured (SendGrid, Cloudinary)
-- [ ] SSL certificates in place (for production)
-- [ ] Secrets manager setup (vault, AWS Secrets Manager, etc.)
-- [ ] Monitoring configured (error tracking, logs)
-- [ ] Backups configured for database
+SIWES Connect is a full-stack monorepo for managing SIWES (Students Industrial Work Experience Scheme) placements. It connects students, organizations, and coordinators.
 
-## Database Setup
+**Stack:**
+- **Frontend:** Next.js 14, React 18, TypeScript, Tailwind CSS, GSAP animations
+- **Backend:** Express.js, TypeScript, Prisma ORM, PostgreSQL, Socket.IO
+- **Infra:** Docker (PostgreSQL + Redis)
 
-### Local Development
-Database is started via Docker Compose:
+---
+
+## Quick Start (Development)
+
+### 1. Prerequisites
+- Node.js 18+
+- Docker Desktop (for PostgreSQL + Redis)
+- npm (workspaces)
+
+### 2. Start Infrastructure
 ```bash
-docker compose up -d
-npx prisma migrate dev
+docker-compose up -d
 ```
 
-### Production Deployment
-
-#### 1. PostgreSQL Setup
-- Create a managed PostgreSQL instance (AWS RDS, Google Cloud SQL, DigitalOcean, etc.)
-- Ensure SSL/TLS connections are enforced
-- Backup strategy enabled (automated daily backups)
-- Connection pooling enabled for high traffic (PgBouncer, pgpool)
-
-#### 2. Create Initial Database
+### 3. Install Dependencies
 ```bash
-# Via SSH/bastion host
-psql -h <db-host> -U postgres
-CREATE DATABASE siwes_production;
-GRANT ALL PRIVILEGES ON DATABASE siwes_production TO <app-user>;
+npm install
 ```
 
-#### 3. Apply Migrations
+### 4. Set Up Environment Variables
+
+**Backend** — Copy and edit `backend/.env`:
 ```bash
-export DATABASE_URL="postgresql://<user>:<password>@<host>:5432/siwes_production"
-npx prisma migrate deploy
+cp backend/.env.example backend/.env
+```
+Edit `backend/.env` with your actual values. For local dev, the defaults work.
+
+**Frontend** — Copy and edit `frontend/.env.local`:
+```bash
+cp frontend/.env.local.example frontend/.env.local
+```
+Set `NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1`.
+
+### 5. Seed the Database
+```bash
+npm run seed --workspace @siwes/backend
+```
+Then regenerate password hashes (if needed):
+```bash
+npx tsx backend/src/scripts/fixPasswordHashes.ts
 ```
 
-#### 4. Seed Initial Data (Optional)
-Create seed script in `backend/prisma/seed.ts` for:
-- Default institutions
-- Initial announcements
-- Test users (if development/staging)
+### 6. Start Dev Servers
+```bash
+# Terminal 1 — Backend (port 5000)
+npm run dev:backend
 
-## Third-Party Services
-
-### SendGrid Email Service
-
-1. **Create Account**
-   - Go to sendgrid.com
-   - Create free tier account (~100 emails/day)
-
-2. **Generate API Key**
-   - Settings → API Keys → Create API Key
-   - Copy to `SENDGRID_API_KEY`
-
-3. **Verify Sender Email**
-   - Settings → Sender Authentication
-   - Add verified sender domain or email
-   - Set `SENDGRID_FROM_EMAIL` to verified address
-
-4. **Create Email Templates** (Optional)
-   - Dynamic Templates → Create Template
-   - Templates used: email verification, password reset, announcements
-
-### Cloudinary File Uploads
-
-1. **Create Account**
-   - Go to cloudinary.com
-   - Create free tier account (25GB storage)
-
-2. **Get Credentials**
-   - Dashboard → Account
-   - Copy Cloud Name, API Key, API Secret
-
-3. **Create Folders** (for organization)
-   - Media Library → Folders
-   - Create: `resumes`, `documents`, `avatars`
-
-4. **Setup Upload Presets** (Optional)
-   - Settings → Upload → Upload Presets
-   - Create presets for each file type with validation
-
-## Environment Variables
-
-### Backend `.env`
-
-```env
-# Database
-DATABASE_URL=postgresql://user:password@db-host:5432/siwes_production
-
-# JWT (use strong random strings from `openssl rand -base64 32`)
-JWT_SECRET=your-strong-random-secret-string-here
-JWT_REFRESH_SECRET=your-strong-random-refresh-secret-string-here
-
-# Email (SendGrid)
-SENDGRID_API_KEY=SG.your-sendgrid-api-key-here
-SENDGRID_FROM_EMAIL=noreply@yourdomain.com
-
-# File Uploads (Cloudinary)
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=your-cloudinary-api-key
-CLOUDINARY_API_SECRET=your-cloudinary-api-secret
-
-# Security
-COORDINATOR_INVITE_CODE=STRONG_INVITE_CODE_WITH_NUMBERS_AND_LETTERS
-
-# Frontend URL (for CORS and Socket.io)
-FRONTEND_URL=https://yourdomain.com
-BACKEND_URL=https://api.yourdomain.com
-
-# Node Environment
-NODE_ENV=production
-
-# Optional: Logging
-LOG_LEVEL=info
+# Terminal 2 — Frontend (port 3001)
+npm run dev:frontend
 ```
 
-### Frontend `.env.production`
+Open http://localhost:3001
 
-```env
-NEXT_PUBLIC_API_URL=https://api.yourdomain.com/api
-FRONTEND_URL=https://yourdomain.com
-```
+---
+
+## Test Accounts
+
+All accounts use password: `Password123!`
+
+| Email | Role | Company/Name |
+|---|---|---|
+| `admin@agroplus.ng` | ORGANIZATION | AgroPlus Integrated Farms |
+| `contact@medcare.ng` | ORGANIZATION | MedCare Health Services |
+| `info@techinnovate.ng` | ORGANIZATION | TechInnovate Nigeria Ltd |
+| `hr@greenfield.ng` | ORGANIZATION | Greenfield Engineering Ltd |
+| `hello@primebank.ng` | ORGANIZATION | Prime Bank & Financial Services |
+| `coordinator@siwes.edu` | COORDINATOR | Dr. Funke Adebayo |
+| `student@siwes.edu` | STUDENT | Michael Okonkwo |
+
+---
+
+## What Was Fixed (This Session)
+
+### Bug Fixes
+
+1. **Organization Placements/Applications pages showing empty data**
+   - **Root cause:** `PlacementsManagerClient` and `ApplicationsManagerClient` used `useState(initialProp)` which only captured the initial empty array. When the parent page fetched data and re-rendered with new props, the child component's state didn't update.
+   - **Fix:** Added `useEffect` to sync local state with incoming props in:
+     - `frontend/src/components/organization/PlacementsManagerClient.tsx`
+     - `frontend/src/components/organization/ApplicationsManagerClient.tsx`
+     - `frontend/src/components/organization/DashboardClient.tsx` (for robustness)
+
+### Production Hardening
+
+2. **CORS allows localhost in production** (`backend/src/app.ts`)
+   - Localhost origins now only added when `NODE_ENV === "development"`
+
+3. **JWT secrets use placeholder defaults** (`backend/src/config/env.ts`)
+   - In production, server now refuses to start without explicit `JWT_SECRET` and `JWT_REFRESH_SECRET`
+
+4. **No graceful shutdown** (`backend/src/server.ts`)
+   - Added `SIGTERM`/`SIGINT` handlers with `prisma.$disconnect()`
+   - Added `unhandledRejection` and `uncaughtException` handlers
+
+5. **Incomplete `.gitignore`**
+   - Added: `dist/`, `.env`, `.env.local`, `*.log`, `temp_*.sql`, `temp_login.json`, `_to_delete/`
+
+6. **Temp files with credentials removed**
+   - Deleted: `temp_query.sql`, `temp_query2.sql`, `temp_query3.sql`, `backend/temp_login.json`, `backend/test-org-api.ts`, `_to_delete/`
+
+7. **Docker-compose hardened** (`docker-compose.yml`)
+   - Added health checks for PostgreSQL and Redis
+   - Added `restart: unless-stopped`
+   - Made passwords configurable via environment variables
+   - Redis now requires authentication
+
+8. **Frontend `.env.local` created** with `NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1`
+
+9. **`next.config.mjs`** — TypeScript errors now block builds (`ignoreBuildErrors: false`). ESLint still skipped (needs `eslint-config-next` installed).
+
+10. **`.env.example` fixed** — Corrected `FRONTEND_URL` to port 3001, added production warnings
+
+---
 
 ## Building for Production
 
 ### Backend
 ```bash
 cd backend
-npm install --production
-npx prisma generate
-npm run build
+npm run build    # prisma generate + tsc
+npm start        # node dist/server.js
 ```
 
 ### Frontend
 ```bash
 cd frontend
-npm install --production
-npm run build
+npm run build    # next build
+npm start        # next start -p 3001
 ```
 
-## Deployment Options
-
-### Option 1: Docker + Kubernetes
-
-```dockerfile
-# backend/Dockerfile
-FROM node:20-alpine
-WORKDIR /app
-COPY . .
-RUN npm ci --production && npm run build
-EXPOSE 3001
-CMD ["npm", "start"]
+### Full Build (from root)
+```bash
+npm run build    # builds both workspaces
 ```
 
-Deploy with Docker Compose or Kubernetes manifests.
+---
 
-### Option 2: PaaS (Recommended for MVP)
+## Environment Variables Reference
 
-#### Vercel (Frontend)
-1. Connect repository to Vercel
-2. Set frontend environment variables
-3. Auto-deploys on push to main
+### Backend (`backend/.env`)
 
-#### Railway/Render (Backend)
-1. Connect repository
-2. Select backend workspace
-3. Set backend environment variables
-4. Set build command: `npm run build`
-5. Set start command: `npm start`
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `NODE_ENV` | No | `development` | Set to `production` for prod |
+| `PORT` | No | `5000` | Server port |
+| `DATABASE_URL` | **Yes** | — | PostgreSQL connection string |
+| `JWT_SECRET` | **Yes (prod)** | dev placeholder | Min 32 chars, used for access tokens |
+| `JWT_REFRESH_SECRET` | **Yes (prod)** | dev placeholder | Min 32 chars, used for refresh tokens |
+| `JWT_EXPIRES_IN` | No | `15m` | Access token TTL |
+| `JWT_REFRESH_EXPIRES_IN` | No | `7d` | Refresh token TTL |
+| `FRONTEND_URL` | **Yes** | `http://localhost:3001` | For CORS origin |
+| `COORDINATOR_INVITE_CODE` | No | `coord_2024_invite` | Invite code for coordinator registration |
+| `SENDGRID_API_KEY` | No | — | For sending emails |
+| `FROM_EMAIL` | No | `noreply@siwesconnect.ng` | Sender email |
+| `CLOUDINARY_CLOUD_NAME` | No | — | For file uploads |
+| `CLOUDINARY_API_KEY` | No | — | For file uploads |
+| `CLOUDINARY_API_SECRET` | No | — | For file uploads |
 
-#### Database Hosting
-- AWS RDS
-- Google Cloud SQL
-- DigitalOcean Managed Databases
-- Railway PostgreSQL
+### Frontend (`frontend/.env.local`)
 
-### Option 3: Traditional VPS
+| Variable | Required | Description |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | **Yes** | Backend API URL (e.g., `http://localhost:5000/api/v1`) |
 
-1. **Server Setup**
+---
+
+## Project Structure
+
+```
+siwes-connect/
+├── backend/
+│   ├── src/
+│   │   ├── app.ts              # Express app setup (CORS, helmet, routes)
+│   │   ├── server.ts           # HTTP server + graceful shutdown
+│   │   ├── config/
+│   │   │   ├── database.ts     # Prisma client
+│   │   │   └── env.ts          # Zod-validated env vars
+│   │   ├── controllers/        # Route handlers
+│   │   ├── middleware/          # Auth, rate limiting, error handling
+│   │   ├── routes/             # Express routers
+│   │   ├── services/           # Business logic (auth, notifications, upload)
+│   │   ├── jobs/               # Cron jobs
+│   │   ├── sockets/            # Socket.IO setup
+│   │   └── scripts/            # Seed, getAllUsers
+│   ├── prisma/
+│   │   ├── schema.prisma       # Database schema (349 lines)
+│   │   └── migrations/         # 3 migrations
+│   ├── .env.example
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── app/                # Next.js App Router pages
+│   │   ├── components/
+│   │   │   ├── organization/   # DashboardClient, PlacementsManagerClient, etc.
+│   │   │   ├── student/        # PlacementSearchClient, ApplicationsClient, etc.
+│   │   │   ├── shared/         # Toast, NotificationBell, Skeleton, etc.
+│   │   │   ├── coordinator/    # Coordinator portal components
+│   │   │   └── providers/      # AuthProvider
+│   │   └── lib/
+│   │       ├── api.ts          # API client functions
+│   │       ├── types.ts        # TypeScript types
+│   │       └── session.ts      # localStorage session management
+│   ├── .env.local
+│   └── package.json
+├── docker-compose.yml          # PostgreSQL + Redis
+├── package.json                # Root workspace config
+└── .gitignore
+```
+
+---
+
+## Known Issues & TODOs
+
+### Must Address Before Production Deploy
+
+1. **Install `eslint-config-next`** — Run `npm install --save-dev eslint-config-next` in the frontend to enable ESLint during builds.
+
+2. **Generate strong secrets** — Replace placeholder JWT secrets with cryptographically random strings:
    ```bash
-   # Ubuntu 22.04 LTS
-   apt update && apt upgrade -y
-   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-   apt install -y nodejs postgresql-client
+   node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
    ```
 
-2. **Deploy Backend**
-   ```bash
-   git clone <repo> /opt/siwes-backend
-   cd /opt/siwes-backend
-   npm install --production
-   npm run build
+3. **Create Dockerfiles** — The current `docker-compose.yml` only has infrastructure (PostgreSQL + Redis). You need to add Dockerfiles for the backend and frontend.
+
+4. **Set up a reverse proxy** — Use Nginx or Caddy in front of the Node.js server for HTTPS, static file serving, and request buffering.
+
+5. **Database indexes** — Consider adding indexes on frequently queried columns:
+   ```prisma
+   @@index([organizationId])
+   @@index([status])
    ```
 
-3. **Process Manager** (PM2)
-   ```bash
-   npm install -g pm2
-   pm2 start dist/server.js --name "siwes-api"
-   pm2 save
-   pm2 startup
-   ```
+6. **`@types/*` packages** — Move `@types/bcrypt`, `@types/cors`, `@types/express`, `@types/jsonwebtoken`, `@types/node` from `dependencies` to `devDependencies` in `backend/package.json`.
 
-4. **Reverse Proxy** (Nginx)
-   ```nginx
-   server {
-     listen 443 ssl;
-     server_name api.yourdomain.com;
-     
-     location / {
-       proxy_pass http://localhost:3001;
-       proxy_http_version 1.1;
-       proxy_set_header Upgrade $http_upgrade;
-       proxy_set_header Connection "upgrade";
-     }
-   }
-   ```
+7. **Enable `trust proxy`** in Express if deploying behind a reverse proxy (for rate limiting to use real client IPs).
 
-## Socket.io Configuration
+### Optional Improvements
 
-### Production Considerations
-- CORS must match frontend URL
-- Use connection pooling for WebSocket connections
-- Consider sticky sessions for load balancing
-- Monitor WebSocket connection metrics
+8. **Connection pooling** — Add `?connection_limit=10` to `DATABASE_URL` or use PgBouncer.
 
-### Redis Adapter (for multiple backend instances)
+9. **LogbookEntry.status** — Currently uses `String` instead of a Prisma enum. Consider migrating.
+
+10. **HTTPS/HSTS** — Add Helmet HSTS configuration for production.
+
+---
+
+## Deployment Checklist
+
+- [ ] Set `NODE_ENV=production` in backend `.env`
+- [ ] Generate and set strong `JWT_SECRET` and `JWT_REFRESH_SECRET`
+- [ ] Set `DATABASE_URL` to production PostgreSQL
+- [ ] Set `FRONTEND_URL` to production frontend domain
+- [ ] Set `NEXT_PUBLIC_API_URL` to production backend API URL
+- [ ] Run `npx prisma migrate deploy` to apply database migrations
+- [ ] Run `npm run build` for both backend and frontend
+- [ ] Start backend with `npm start` (or PM2/systemd)
+- [ ] Start frontend with `npm start` (or standalone mode)
+- [ ] Configure Nginx/Caddy reverse proxy with HTTPS
+- [ ] Set up database backups
+- [ ] Configure monitoring (e.g., Sentry, Prometheus)
+
+---
+
+## Useful Commands
+
 ```bash
-npm install socket.io-redis
+# Database
+npx prisma migrate dev          # Create migration
+npx prisma migrate deploy      # Apply migrations
+npx prisma studio              # Visual database browser
+npx prisma generate            # Regenerate Prisma client
+
+# Seed data
+npm run seed --workspace @siwes/backend
+
+# List all users
+npm run users --workspace @siwes/backend
+
+# Kill stuck dev servers
+Get-Process node | Stop-Process -Force    # PowerShell
 ```
-
-Update `backend/src/sockets/index.ts`:
-```typescript
-import { createAdapter } from "@socket.io/redis-adapter";
-
-const pubClient = createRedisClient();
-const subClient = pubClient.duplicate();
-
-io.adapter(createAdapter(pubClient, subClient));
-```
-
-## Cron Job Configuration
-
-### Single Server
-Jobs run in the main API process (current setup). Safe for single-server deployments.
-
-### Multiple Servers
-For horizontal scaling, migrate to external job queue:
-- Bull (Redis-backed)
-- AWS Lambda
-- Google Cloud Tasks
-- Kue
-
-## Monitoring & Logging
-
-### Application Monitoring
-- Error tracking: Sentry, LogRocket, or Rollbar
-- Performance: New Relic, DataDog, or AppDynamics
-- Uptime: StatusPage.io or UptimeRobot
-
-### Logs
-- Centralize logs: ELK Stack, CloudWatch, or LogRocket
-- Alert on errors/warnings
-- Archive logs for 30+ days
-
-### Database Monitoring
-- Query performance
-- Connection pool usage
-- Disk space
-
-## SSL/TLS Certificates
-
-### Using Let's Encrypt
-```bash
-apt install certbot python3-certbot-nginx
-certbot certonly --nginx -d yourdomain.com -d api.yourdomain.com
-```
-
-### Renewal
-```bash
-systemctl enable certbot.timer
-systemctl start certbot.timer
-```
-
-## Scaling Considerations
-
-### Horizontal Scaling
-- API servers: Stateless, can scale up/down freely
-- Database: Use managed services with failover
-- File uploads: Cloudinary handles distribution
-- Real-time: Add Redis adapter for Socket.io
-
-### Performance Tuning
-- Database connection pooling
-- Frontend static asset CDN
-- Backend response caching (Redis)
-- Compression (gzip)
-- Database query optimization
-
-## Backup & Disaster Recovery
-
-### Database Backups
-- Automated daily backups (managed service)
-- Point-in-time recovery enabled
-- Test restore procedure monthly
-
-### Application Code
-- All code in version control
-- Deployments from tagged releases
-- Quick rollback capability
-
-### File Uploads
-- Cloudinary handles redundancy
-- Download/archive important files regularly
-
-## Security Hardening
-
-### Environment
-- Secrets never in version control
-- Use secrets manager for credentials
-- Limit SSH access
-- Enable firewall rules
-- Regular security patches
-
-### Application
-- Rate limiting (configured)
-- HELMET security headers (configured)
-- CSRF protection (if adding forms)
-- SQL injection prevention (Prisma handles this)
-- XSS protection (React/Next.js handles this)
-
-### API
-- All endpoints require HTTPS
-- API key rotation strategy
-- Request signing (if needed)
-- Audit logging (configured)
-
-## Post-Deployment
-
-1. **Smoke Tests**
-   - Login flow works
-   - File uploads work
-   - Email delivery works
-   - Real-time notifications work
-
-2. **Performance Baseline**
-   - Record response times
-   - Database query times
-   - WebSocket latency
-
-3. **Monitoring Setup**
-   - Alerts configured
-   - Dashboards created
-   - On-call rotation established
-
-4. **Documentation**
-   - Runbook for common issues
-   - Escalation procedures
-   - Contact information
-
-## Troubleshooting
-
-### Common Issues
-
-**Database Connection Refused**
-```bash
-# Check PostgreSQL is running and accessible
-psql -h <host> -U <user> -c "SELECT 1"
-# Verify DATABASE_URL is correct
-echo $DATABASE_URL
-```
-
-**Email Not Sending**
-```bash
-# Check SENDGRID_API_KEY is set
-# Check sender email is verified
-# Check logs for SendGrid API errors
-```
-
-**File Uploads Failing**
-```bash
-# Check Cloudinary credentials
-# Check file size limits
-# Check CORS configuration
-```
-
-**Socket.io Connection Issues**
-```bash
-# Check FRONTEND_URL matches
-# Check WebSocket port is open
-# Check CORS headers
-```
-
-## Rollback Procedure
-
-If deployment fails:
-```bash
-# 1. Revert to previous version
-git checkout <previous-tag>
-
-# 2. Rebuild
-npm run build
-
-# 3. Reapply previous database state (if schema changed)
-npx prisma migrate resolve --rolled-back <migration-name>
-
-# 4. Restart services
-pm2 restart siwes-api
-```
-
-## Support & Monitoring
-
-- Error tracking: Set up alerts for critical errors
-- Database: Monitor disk usage and connection counts
-- API: Monitor response times and error rates
-- Frontend: Monitor Core Web Vitals
-- On-call: Establish escalation procedures

@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { ApplicationsClient } from "@/components/student/ApplicationsClient";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { getStudentApplications } from "@/lib/api";
 import { ApplicationItem } from "@/lib/types";
+import Toast from "@/components/shared/Toast";
 
 export default function StudentApplicationsPage() {
   const { session } = useAuth();
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
-  const [message, setMessage] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [isPending, startTransition] = useTransition();
+  const dismissToast = useCallback(() => setToastMsg(null), []);
 
   useEffect(() => {
     if (!session?.accessToken) return;
@@ -19,7 +21,7 @@ export default function StudentApplicationsPage() {
         const data = await getStudentApplications(session.accessToken);
         setApplications(data);
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Unable to load applications.");
+        setToastMsg({ message: error instanceof Error ? error.message : "Unable to load applications.", type: "error" });
       }
     });
   }, [session?.accessToken]);
@@ -36,12 +38,13 @@ export default function StudentApplicationsPage() {
     );
   }
 
-  if (message && !applications.length && !isPending) {
+  if (toastMsg && !applications.length && !isPending) {
     return (
       <main className="app-container">
         <section className="card">
-          <p style={{ margin: 0, color: "#6B7280" }}>{message}</p>
+          <p style={{ margin: 0, color: "#6B7280" }}>{toastMsg.message}</p>
         </section>
+        <Toast message={toastMsg.message} type={toastMsg.type} onDismiss={dismissToast} />
       </main>
     );
   }

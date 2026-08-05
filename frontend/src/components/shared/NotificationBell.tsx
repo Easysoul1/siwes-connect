@@ -1,11 +1,31 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useNotifications } from "./NotificationProvider";
+import { useAuth } from "@/components/providers/AuthProvider";
+
+function getNotificationLink(type: string, data?: Record<string, unknown>, role?: string): string | null {
+  if (role === "ORGANIZATION") {
+    return "/organization/applications";
+  }
+  if (role === "STUDENT") {
+    if (type === "APPLICATION_ACCEPTED" || type === "APPLICATION_REJECTED" || type === "APPLICATION_REVIEWED" || type === "PLACEMENT_CONFIRMED") {
+      return "/student/applications";
+    }
+    return "/student/dashboard";
+  }
+  if (role === "COORDINATOR") {
+    return "/coordinator/dashboard";
+  }
+  return null;
+}
 
 export function NotificationBell() {
   const { notifications, unreadCount, loading, fetchNotifications, markAsRead } =
     useNotifications();
+  const { session } = useAuth();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -18,6 +38,16 @@ export function NotificationBell() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  function handleNotificationClick(id: string, type: string, data?: Record<string, unknown>) {
+    if (!open) return;
+    markAsRead(id);
+    const link = getNotificationLink(type, data, session?.user?.role);
+    if (link) {
+      setOpen(false);
+      router.push(link);
+    }
+  }
 
   return (
     <div ref={dropdownRef} style={{ position: "relative" }}>
@@ -106,9 +136,7 @@ export function NotificationBell() {
               <button
                 key={n.id}
                 type="button"
-                onClick={() => {
-                  if (!n.isRead) markAsRead(n.id);
-                }}
+                onClick={() => handleNotificationClick(n.id, n.type, n.data)}
                 style={{
                   display: "block",
                   width: "100%",

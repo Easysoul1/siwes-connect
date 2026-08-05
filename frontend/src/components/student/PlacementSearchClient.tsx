@@ -10,6 +10,7 @@ import {
   getOrganizationPublicPlacements
 } from "@/lib/api";
 import { Placement } from "@/lib/types";
+import Toast from "@/components/shared/Toast";
 
 type OrgEntry = {
   id: string;
@@ -42,10 +43,11 @@ export function PlacementSearchClient({ token }: Props) {
   const [allPlacements, setAllPlacements] = useState<Placement[]>([]);
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
   const [orgPlacements, setOrgPlacements] = useState<Placement[]>([]);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingOrg, setLoadingOrg] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const dismissToast = useCallback(() => setToastMsg(null), []);
 
   useEffect(() => {
     (async () => {
@@ -57,7 +59,7 @@ export function PlacementSearchClient({ token }: Props) {
         setOrgs(orgData);
         setAllPlacements(placements);
       } catch (err) {
-        setFeedback(err instanceof Error ? err.message : "Failed to load data");
+        setToastMsg({ message: err instanceof Error ? err.message : "Failed to load data", type: "error" });
       } finally {
         setLoading(false);
       }
@@ -70,7 +72,7 @@ export function PlacementSearchClient({ token }: Props) {
       const data = await getOrganizationPublicPlacements(orgId);
       setOrgPlacements(data);
     } catch (err) {
-      setFeedback(err instanceof Error ? err.message : "Failed to load placements");
+      setToastMsg({ message: err instanceof Error ? err.message : "Failed to load placements", type: "error" });
     } finally {
       setLoadingOrg(false);
     }
@@ -114,22 +116,22 @@ export function PlacementSearchClient({ token }: Props) {
 
   function handleApply(placementId: string) {
     if (!token) {
-      setFeedback("Sign in as student to submit applications.");
+      setToastMsg({ message: "Sign in as student to submit applications.", type: "error" });
       return;
     }
     startTransition(async () => {
       try {
         await applyToPlacement(token, placementId);
-        setFeedback("Application submitted successfully.");
+        setToastMsg({ message: "Application submitted successfully.", type: "success" });
       } catch (err) {
-        setFeedback(err instanceof Error ? err.message : "Failed to submit application.");
+        setToastMsg({ message: err instanceof Error ? err.message : "Failed to submit application.", type: "error" });
       }
     });
   }
 
   function selectOrg(orgId: string | null) {
     setSelectedOrg(orgId);
-    setFeedback(null);
+    setToastMsg(null);
   }
 
   if (loading) {
@@ -222,19 +224,7 @@ export function PlacementSearchClient({ token }: Props) {
         )}
       </section>
 
-      {feedback && (
-        <p
-          style={{
-            margin: "0 0 14px",
-            padding: "0.5rem 1rem",
-            borderRadius: 8,
-            background: feedback.includes("success") ? "#D1FAE5" : "#FEF2F2",
-            color: feedback.includes("success") ? "#065F46" : "#991B1B"
-          }}
-        >
-          {feedback}
-        </p>
-      )}
+      {toastMsg ? <Toast message={toastMsg.message} type={toastMsg.type} onDismiss={dismissToast} /> : null}
 
       {!selectedOrg && (
         <>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { confirmOrganizationPlacement, updateOrganizationApplicationStatus } from "@/lib/api";
 import { OrganizationDashboardStats } from "@/lib/types";
 
@@ -21,6 +21,10 @@ export function DashboardClient({ stats, applications, token }: Props) {
   const [items, setItems] = useState(applications);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setItems(applications);
+  }, [applications]);
 
   function handleStatus(
     applicationId: string,

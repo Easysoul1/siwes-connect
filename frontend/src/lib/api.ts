@@ -361,6 +361,14 @@ export async function createPlacement(
     applicationDeadline: string;
     isRemote?: boolean;
     requiredDepartment?: string;
+    responsibilities?: string[];
+    requirements?: string[];
+    minimumLevel?: string;
+    minimumCGPA?: number;
+    durationWeeks?: number;
+    startDate?: string;
+    hasStipend?: boolean;
+    stipendAmount?: number;
   }
 ) {
   return authRequest<{ message: string }>(`/organizations/placements`, token, {

@@ -10,10 +10,14 @@ import { router } from "./routes";
 export const app = express();
 
 const allowedOrigin = env.FRONTEND_URL.replace(/\/$/, "");
+const isDev = env.NODE_ENV === "development";
+const corsOrigins = isDev
+  ? [allowedOrigin, "http://localhost:3000", "http://localhost:3001"]
+  : [allowedOrigin];
 
 app.use(
   cors({
-    origin: [allowedOrigin, "http://localhost:3000", "http://localhost:3001"],
+    origin: corsOrigins,
     credentials: true
   })
 );

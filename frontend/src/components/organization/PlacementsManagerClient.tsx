@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -26,6 +26,10 @@ type Props = {
 export function PlacementsManagerClient({ placements, token }: Props) {
   const [items, setItems] = useState(placements);
   const [statusFilter, setStatusFilter] = useState("ALL");
+
+  useEffect(() => {
+    setItems(placements);
+  }, [placements]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 

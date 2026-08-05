@@ -2,23 +2,25 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState, useTransition } from "react";
+import { FormEvent, useCallback, useState, useTransition } from "react";
 import { loginUser } from "@/lib/api";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { extractFieldErrors, FieldError } from "@/components/shared/FormErrors";
+import Toast from "@/components/shared/Toast";
 
 export default function LoginPage() {
   const router = useRouter();
   const { setSession } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null);
   const [isPending, startTransition] = useTransition();
+  const dismissToast = useCallback(() => setToastMsg(null), []);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setMessage(null);
+    setToastMsg(null);
     setFieldErrors(null);
 
     startTransition(async () => {
@@ -38,7 +40,7 @@ export default function LoginPage() {
         if (Object.keys(fe).length > 0) {
           setFieldErrors(fe);
         } else {
-          setMessage(error instanceof Error ? error.message : "Login failed");
+          setToastMsg({ message: error instanceof Error ? error.message : "Login failed", type: "error" });
         }
       }
     });
@@ -95,7 +97,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {message ? <p style={{ color: "#b91c1c", marginBottom: 0 }}>{message}</p> : null}
+        {toastMsg ? <Toast message={toastMsg.message} type={toastMsg.type} onDismiss={dismissToast} /> : null}
 
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
           <Link href="/register" style={{ color: "#1E40AF", fontWeight: 600 }}>

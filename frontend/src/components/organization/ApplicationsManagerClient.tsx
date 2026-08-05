@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   confirmOrganizationPlacement,
   updateOrganizationApplicationStatus
@@ -24,6 +24,10 @@ export function ApplicationsManagerClient({ applications, token }: Props) {
   const [rows, setRows] = useState(applications);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setRows(applications);
+  }, [applications]);
 
   const filtered = useMemo(() => {
     if (statusFilter === "ALL") return rows;
@@ -67,7 +71,7 @@ export function ApplicationsManagerClient({ applications, token }: Props) {
         </p>
 
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.8rem" }}>
-          {["ALL", "SUBMITTED", "UNDER_REVIEW", "ACCEPTED", "REJECTED", "PLACEMENT_CONFIRMED"].map(
+          {["ALL", "SUBMITTED", "UNDER_REVIEW", "ACCEPTED", "REJECTED", "PLACEMENT_CONFIRMED", "WITHDRAWN"].map(
             (status) => (
               <button
                 key={status}

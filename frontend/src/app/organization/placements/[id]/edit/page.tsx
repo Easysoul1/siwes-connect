@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { FormEvent, useEffect, useState, useTransition } from "react";
+import { FormEvent, useCallback, useEffect, useState, useTransition } from "react";
 import { getOrganizationPlacementById, updatePlacement } from "@/lib/api";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { NIGERIAN_STATES } from "@/shared/constants/states";
+import Toast from "@/components/shared/Toast";
 
 export default function EditPlacementPage() {
   const params = useParams<{ id: string }>();
   const { session } = useAuth();
   const [isPending, startTransition] = useTransition();
-  const [message, setMessage] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -38,15 +39,17 @@ export default function EditPlacementPage() {
           isRemote: placement.isRemote
         });
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Unable to load placement");
+        setToastMsg({ message: error instanceof Error ? error.message : "Unable to load placement", type: "error" });
       }
     });
   }, [params?.id, session?.accessToken]);
 
+  const dismissToast = useCallback(() => setToastMsg(null), []);
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!session?.accessToken || !params?.id) {
-      setMessage("Sign in as organization to edit placements.");
+      setToastMsg({ message: "Sign in as organization to edit placements.", type: "error" });
       return;
     }
 
@@ -61,9 +64,9 @@ export default function EditPlacementPage() {
           applicationDeadline: new Date(form.applicationDeadline).toISOString(),
           isRemote: form.isRemote
         });
-        setMessage("Placement updated.");
+        setToastMsg({ message: "Placement updated successfully.", type: "success" });
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Update failed");
+        setToastMsg({ message: error instanceof Error ? error.message : "Update failed", type: "error" });
       }
     });
   }
@@ -83,7 +86,7 @@ export default function EditPlacementPage() {
         <form onSubmit={onSubmit} style={{ display: "grid", gap: "0.8rem" }}>
           <div className="form-grid">
             <div>
-              <label className="label">Title</label>
+              <label className="label">Title <span style={{ color: "#EF4444" }}>*</span></label>
               <input className="input" value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} />
             </div>
             <div>
@@ -91,7 +94,7 @@ export default function EditPlacementPage() {
               <input className="input" value={form.requiredDepartment} onChange={(event) => setForm((prev) => ({ ...prev, requiredDepartment: event.target.value }))} />
             </div>
             <div>
-              <label className="label">State</label>
+              <label className="label">State <span style={{ color: "#EF4444" }}>*</span></label>
               <select className="select" value={form.state} onChange={(event) => setForm((prev) => ({ ...prev, state: event.target.value }))}>
                 <option value="">Select state</option>
                 {NIGERIAN_STATES.map((state) => (
@@ -102,11 +105,11 @@ export default function EditPlacementPage() {
               </select>
             </div>
             <div>
-              <label className="label">Total Slots</label>
+              <label className="label">Total Slots <span style={{ color: "#EF4444" }}>*</span></label>
               <input className="input" type="number" min={1} value={form.totalSlots} onChange={(event) => setForm((prev) => ({ ...prev, totalSlots: event.target.value }))} />
             </div>
             <div>
-              <label className="label">Deadline</label>
+              <label className="label">Deadline <span style={{ color: "#EF4444" }}>*</span></label>
               <input className="input" type="date" value={form.applicationDeadline} onChange={(event) => setForm((prev) => ({ ...prev, applicationDeadline: event.target.value }))} />
             </div>
             <div style={{ alignSelf: "end" }}>
@@ -118,7 +121,7 @@ export default function EditPlacementPage() {
           </div>
 
           <div>
-            <label className="label">Description</label>
+            <label className="label">Description <span style={{ color: "#EF4444" }}>*</span></label>
             <textarea className="textarea" value={form.description} onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} />
           </div>
 
@@ -126,9 +129,9 @@ export default function EditPlacementPage() {
             {isPending ? "Updating..." : "Save Changes"}
           </button>
         </form>
-
-        {message ? <p style={{ marginBottom: 0, color: "#4B5563" }}>{message}</p> : null}
       </section>
+
+      {toastMsg ? <Toast message={toastMsg.message} type={toastMsg.type} onDismiss={dismissToast} /> : null}
     </main>
   );
 }
