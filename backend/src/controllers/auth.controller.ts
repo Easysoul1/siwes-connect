@@ -14,7 +14,8 @@ const studentRegistrationSchema = z.object({
   level: z.string().trim().min(2),
   cgpa: z.number().min(0).max(5).optional(),
   currentState: z.string().trim().min(2),
-  preferredStates: z.array(z.string().trim().min(2)).default([])
+  preferredStates: z.array(z.string().trim().min(2)).default([]),
+  institutionId: z.string().trim().optional()
 });
 
 const organizationRegistrationSchema = z.object({
@@ -27,7 +28,8 @@ const coordinatorRegistrationSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   fullName: z.string().trim().min(2),
-  inviteCode: z.string().trim().min(3)
+  inviteCode: z.string().trim().min(3),
+  institutionId: z.string().trim().optional()
 });
 
 const loginSchema = z.object({
@@ -69,7 +71,8 @@ export async function registerCoordinator(req: Request, res: Response, next: Nex
     const result = await AuthService.registerCoordinator({
       email: payload.email,
       password: payload.password,
-      fullName: payload.fullName
+      fullName: payload.fullName,
+      institutionId: payload.institutionId
     });
     res.status(201).json({ message: "Coordinator registration successful", ...result });
   } catch (error) {

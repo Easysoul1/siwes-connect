@@ -9,6 +9,7 @@ import {
   updateStudentProfile
 } from "@/lib/api";
 import { NIGERIAN_STATES } from "@/shared/constants/states";
+import { NIGERIAN_INSTITUTIONS } from "@/shared/constants/institutions";
 import { extractFieldErrors, FieldError } from "@/components/shared/FormErrors";
 
 export default function StudentProfilePage() {
@@ -23,6 +24,7 @@ export default function StudentProfilePage() {
     department: "",
     level: "",
     cgpa: "",
+    institution: "",
     currentState: "",
     preferredStates: [] as string[]
   });
@@ -39,6 +41,7 @@ export default function StudentProfilePage() {
           department: profile.department,
           level: profile.level,
           cgpa: String(profile.cgpa ?? ""),
+          institution: (profile as any).institution?.shortName ?? "",
           currentState: profile.currentState,
           preferredStates: profile.preferredStates
         });
@@ -72,7 +75,8 @@ export default function StudentProfilePage() {
           department: form.department,
           level: form.level,
           cgpa: form.cgpa ? Number(form.cgpa) : undefined,
-          currentState: form.currentState
+          currentState: form.currentState,
+          institutionId: form.institution || undefined
         });
         await updateStudentPreferences(session.accessToken, {
           currentState: form.currentState,
@@ -167,6 +171,24 @@ export default function StudentProfilePage() {
               }}
             />
             <FieldError field="cgpa" errors={fieldErrors} />
+          </div>
+          <div>
+            <label className="label">Institution</label>
+            <select
+              className="select"
+              value={form.institution}
+              onChange={(event) => {
+                setForm((prev) => ({ ...prev, institution: event.target.value }));
+                setFieldErrors(null);
+              }}
+            >
+              <option value="">Select institution</option>
+              {NIGERIAN_INSTITUTIONS.map((inst) => (
+                <option key={inst.shortName} value={inst.shortName}>
+                  {inst.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="label">Current State</label>

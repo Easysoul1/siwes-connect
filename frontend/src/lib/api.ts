@@ -142,6 +142,7 @@ export async function registerStudent(payload: {
   cgpa?: number;
   currentState: string;
   preferredStates: string[];
+  institutionId?: string;
 }) {
   return publicRequest<AuthTokens>("/auth/register/student", {
     method: "POST",
@@ -165,6 +166,7 @@ export async function registerCoordinator(payload: {
   password: string;
   fullName: string;
   inviteCode: string;
+  institutionId?: string;
 }) {
   return publicRequest<AuthTokens>("/auth/register/coordinator", {
     method: "POST",
@@ -638,4 +640,80 @@ export async function getUnreadNotificationCount(
     "/notifications/unread-count",
     token
   ).then((res) => res.data);
+}
+
+export async function getOrgStudents(token: string) {
+  const body = await authRequest<{ data: any[] }>("/organizations/students", token);
+  return body.data;
+}
+
+export async function getOrgStudentLogbook(token: string, studentId: string) {
+  const body = await authRequest<{ data: { student: any; entries: LogbookEntry[] } }>(
+    `/organizations/students/${studentId}/logbook`,
+    token
+  );
+  return body.data;
+}
+
+export async function addOrgComment(
+  token: string,
+  entryId: string,
+  payload: { comment: string; signature: string }
+) {
+  return authRequest<{ message: string; data: LogbookEntry }>(
+    `/organizations/logbook/${entryId}/comment`,
+    token,
+    { method: "PATCH", body: JSON.stringify(payload) }
+  );
+}
+
+export async function getCoordInstitutionStudents(token: string) {
+  const body = await authRequest<{ data: any[] }>("/coordinator/institution/students", token);
+  return body.data;
+}
+
+export async function getCoordStudentLogbook(token: string, studentId: string) {
+  const body = await authRequest<{ data: { student: any; entries: LogbookEntry[] } }>(
+    `/coordinator/institution/students/${studentId}/logbook`,
+    token
+  );
+  return body.data;
+}
+
+export async function addCoordComment(
+  token: string,
+  entryId: string,
+  payload: { comment: string; signature: string }
+) {
+  return authRequest<{ message: string; data: LogbookEntry }>(
+    `/coordinator/logbook/${entryId}/comment`,
+    token,
+    { method: "PATCH", body: JSON.stringify(payload) }
+  );
+}
+
+export async function downloadLogbookPDF(token: string): Promise<Blob> {
+  const url = `${API_BASE_URL}/students/logbook/download`;
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ message: "Download failed" }));
+    throw new Error(err.message || "Download failed");
+  }
+  return response.blob();
+}
+
+export async function downloadAcceptanceLetter(token: string, applicationId: string): Promise<Blob> {
+  const url = `${API_BASE_URL}/students/applications/${applicationId}/acceptance-letter`;
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ message: "Download failed" }));
+    throw new Error(err.message || "Download failed");
+  }
+  return response.blob();
 }

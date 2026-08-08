@@ -18,6 +18,7 @@ type RegisterStudentPayload = RegisterBasePayload & {
   cgpa?: number;
   currentState: string;
   preferredStates: string[];
+  institutionId?: string;
 };
 
 type RegisterOrganizationPayload = RegisterBasePayload & {
@@ -26,6 +27,7 @@ type RegisterOrganizationPayload = RegisterBasePayload & {
 
 type RegisterCoordinatorPayload = RegisterBasePayload & {
   fullName: string;
+  institutionId?: string;
 };
 
 type TokenPayload = {
@@ -72,6 +74,14 @@ export class AuthService {
         select: { id: true, email: true, role: true, createdAt: true }
       });
 
+      let institutionId: string | null = null;
+      if (payload.institutionId) {
+        const inst = await tx.institution.findFirst({
+          where: { shortName: payload.institutionId.toUpperCase() }
+        });
+        institutionId = inst?.id ?? null;
+      }
+
       const student = await tx.student.create({
         data: {
           userId: user.id,
@@ -81,7 +91,8 @@ export class AuthService {
           level: payload.level,
           cgpa: payload.cgpa,
           currentState: payload.currentState,
-          preferredStates: payload.preferredStates
+          preferredStates: payload.preferredStates,
+          institutionId
         }
       });
 
@@ -164,8 +175,16 @@ export class AuthService {
         select: { id: true, email: true, role: true, createdAt: true }
       });
 
+      let institutionId: string | null = null;
+      if (payload.institutionId) {
+        const inst = await tx.institution.findFirst({
+          where: { shortName: payload.institutionId.toUpperCase() }
+        });
+        institutionId = inst?.id ?? null;
+      }
+
       const coordinator = await tx.coordinator.create({
-        data: { userId: user.id, fullName: payload.fullName }
+        data: { userId: user.id, fullName: payload.fullName, institutionId }
       });
 
       return { user, coordinator };

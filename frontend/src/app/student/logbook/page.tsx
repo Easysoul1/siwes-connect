@@ -6,7 +6,8 @@ import {
   deleteLogbookEntry,
   getMyLogbook,
   submitLogbookEntry,
-  updateLogbookEntry
+  updateLogbookEntry,
+  downloadLogbookPDF
 } from "@/lib/api";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { LogbookEntry } from "@/lib/types";
@@ -36,6 +37,7 @@ export default function StudentLogbookPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const loadEntries = useCallback(async () => {
     if (!session?.accessToken) return;
@@ -128,6 +130,26 @@ export default function StudentLogbookPage() {
     setEditingId(null);
   }
 
+  async function handleDownloadPDF() {
+    if (!session?.accessToken) return;
+    setDownloading(true);
+    try {
+      const blob = await downloadLogbookPDF(session.accessToken);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "my-siwes-logbook.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Failed to download PDF");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   const groupedByWeek = entries.reduce<
     Record<number, { draft: LogbookEntry[]; submitted: LogbookEntry[] }>
   >((acc, entry) => {
@@ -182,13 +204,23 @@ export default function StudentLogbookPage() {
           </p>
         </div>
         {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="btn btn-primary"
-            style={{ height: 40 }}
-          >
-            + New Entry
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={handleDownloadPDF}
+              className="btn btn-secondary"
+              style={{ height: 40 }}
+              disabled={downloading || entries.length === 0}
+            >
+              {downloading ? "Generating..." : "Download PDF"}
+            </button>
+            <button
+              onClick={() => setShowForm(true)}
+              className="btn btn-primary"
+              style={{ height: 40 }}
+            >
+              + New Entry
+            </button>
+          </div>
         )}
       </div>
 

@@ -6,6 +6,7 @@ import { FormEvent, useState, useTransition } from "react";
 import { registerStudent } from "@/lib/api";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { NIGERIAN_STATES } from "@/shared/constants/states";
+import { NIGERIAN_INSTITUTIONS } from "@/shared/constants/institutions";
 
 const steps = [
   "Account",
@@ -33,6 +34,7 @@ export default function StudentRegisterPage() {
     field: "",
     level: "",
     cgpa: "",
+    institution: "",
     currentState: "",
     preferredStates: [] as string[]
   });
@@ -74,7 +76,8 @@ export default function StudentRegisterPage() {
           level: form.level,
           cgpa: form.cgpa ? Number(form.cgpa) : undefined,
           currentState: form.currentState,
-          preferredStates: form.preferredStates
+          preferredStates: form.preferredStates,
+          institutionId: form.institution || undefined
         });
         setSession(session);
         router.push("/student/dashboard");
@@ -187,6 +190,24 @@ export default function StudentRegisterPage() {
                     setForm((prev) => ({ ...prev, matricNumber: event.target.value }))
                   }
                 />
+              </div>
+              <div>
+                <label className="label">Institution</label>
+                <select
+                  className="select"
+                  value={form.institution}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, institution: event.target.value }))
+                  }
+                  required
+                >
+                  <option value="">Select institution</option>
+                  {NIGERIAN_INSTITUTIONS.map((inst) => (
+                    <option key={inst.shortName} value={inst.shortName}>
+                      {inst.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="label">Department</label>

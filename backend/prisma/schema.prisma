@@ -295,6 +295,12 @@ model LogbookEntry {
   activity    String
   description String
   supervisorComment String?
+  organizationComment   String?
+  organizationSignature String?
+  organizationReviewedAt DateTime?
+  coordinatorComment    String?
+  coordinatorSignature  String?
+  coordinatorReviewedAt DateTime?
   status      String        @default("DRAFT") // DRAFT | SUBMITTED
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt

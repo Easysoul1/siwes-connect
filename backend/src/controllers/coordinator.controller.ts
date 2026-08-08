@@ -482,3 +482,36 @@ export async function deleteAnnouncement(req: Request, res: Response, next: Next
     next(error);
   }
 }
+
+const updateCoordinatorProfileSchema = z.object({
+  institutionId: z.string().trim().optional()
+});
+
+export async function updateCoordinatorProfile(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) throw new AppError(401, "Unauthorized");
+    const payload = updateCoordinatorProfileSchema.parse(req.body);
+
+    const coordinator = await prisma.coordinator.findUnique({
+      where: { userId: req.user.id }
+    });
+    if (!coordinator) throw new AppError(404, "Coordinator profile not found");
+
+    const updateData: Record<string, unknown> = {};
+    if (payload.institutionId) {
+      const inst = await prisma.institution.findFirst({
+        where: { shortName: payload.institutionId.toUpperCase() }
+      });
+      updateData.institutionId = inst?.id ?? null;
+    }
+
+    const updated = await prisma.coordinator.update({
+      where: { id: coordinator.id },
+      data: updateData
+    });
+
+    res.json({ message: "Profile updated", data: updated });
+  } catch (error) {
+    next(error);
+  }
+}

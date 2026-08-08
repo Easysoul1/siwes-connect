@@ -14,7 +14,8 @@ const updateProfileSchema = z.object({
   department: z.string().trim().min(2).optional(),
   level: z.string().trim().min(2).optional(),
   cgpa: z.number().min(0).max(5).nullable().optional(),
-  currentState: z.string().trim().min(2).optional()
+  currentState: z.string().trim().min(2).optional(),
+  institutionId: z.string().trim().optional()
 });
 
 const updatePreferencesSchema = z.object({
@@ -55,9 +56,17 @@ export async function updateProfile(req: Request, res: Response, next: NextFunct
     const payload = updateProfileSchema.parse(req.body);
     const student = await getStudentByUserId(req.user.id);
 
+    const updateData: Record<string, unknown> = { ...payload };
+    if (payload.institutionId) {
+      const inst = await prisma.institution.findFirst({
+        where: { shortName: payload.institutionId.toUpperCase() }
+      });
+      updateData.institutionId = inst?.id ?? null;
+    }
+
     const updated = await prisma.student.update({
       where: { id: student.id },
-      data: payload
+      data: updateData
     });
 
     res.json({ message: "Profile updated", data: updated });
@@ -400,6 +409,143 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
         placementConfirmed: confirmed
       }
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+import { generateLogbookPDF } from "../services/logbook-pdf.service";
+import { generateAcceptanceLetterPDF } from "../services/acceptance-letter-pdf.service";
+
+export async function downloadLogbookPDF(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) throw new AppError(401, "Unauthorized");
+    const student = await getStudentByUserId(req.user.id);
+
+    const entries = await prisma.logbookEntry.findMany({
+      where: { studentId: student.id },
+      orderBy: [{ weekNumber: "asc" }, { date: "asc" }]
+    });
+
+    if (entries.length === 0) {
+      throw new AppError(400, "No logbook entries to download");
+    }
+
+    const confirmedApp = await prisma.application.findFirst({
+      where: {
+        studentId: student.id,
+        status: { in: ["ACCEPTED", "PLACEMENT_CONFIRMED"] }
+      },
+      include: {
+        placement: {
+          include: { organization: true }
+        }
+      }
+    });
+
+    const organization = confirmedApp?.placement?.organization;
+    if (!organization) {
+      throw new AppError(400, "No confirmed placement found");
+    }
+
+    const pdfBuffer = await generateLogbookPDF(
+      {
+        firstName: student.firstName,
+        lastName: student.lastName,
+        matricNumber: student.matricNumber,
+        department: student.department,
+        level: student.level,
+        institution: student.institution
+      },
+      {
+        companyName: organization.companyName,
+        address: organization.address,
+        state: organization.state
+      },
+      entries
+    );
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="logbook-${student.firstName}-${student.lastName}.pdf"`
+    );
+    res.send(pdfBuffer);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function downloadAcceptanceLetter(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) throw new AppError(401, "Unauthorized");
+    const student = await getStudentByUserId(req.user.id);
+    const { id: applicationId } = req.params;
+
+    const application = await prisma.application.findFirst({
+      where: {
+        id: applicationId,
+        studentId: student.id,
+        status: { in: ["ACCEPTED", "PLACEMENT_CONFIRMED"] }
+      },
+      include: {
+        placement: true,
+        organization: {
+          include: { user: { select: { email: true } } }
+        }
+      }
+    });
+
+    if (!application || !application.placement || !application.organization) {
+      throw new AppError(404, "Application not found or not accepted");
+    }
+
+    let coordinator = null;
+    if (student.institutionId) {
+      coordinator = await prisma.coordinator.findFirst({
+        where: { institutionId: student.institutionId },
+        include: { institution: { select: { name: true } } }
+      });
+    }
+
+    const pdfBuffer = await generateAcceptanceLetterPDF({
+      student: {
+        firstName: student.firstName,
+        lastName: student.lastName,
+        matricNumber: student.matricNumber,
+        department: student.department,
+        level: student.level,
+        institution: student.institution
+      },
+      organization: {
+        companyName: application.organization.companyName,
+        contactPersonName: application.organization.contactPersonName,
+        contactPersonTitle: application.organization.contactPersonTitle,
+        contactEmail: application.organization.contactEmail || application.organization.user?.email,
+        contactPhone: application.organization.contactPhone,
+        address: application.organization.address,
+        state: application.organization.state
+      },
+      placement: {
+        title: application.placement.title,
+        durationWeeks: application.placement.durationWeeks,
+        startDate: application.placement.startDate,
+        state: application.placement.state
+      },
+      coordinator: coordinator
+        ? {
+            fullName: coordinator.fullName,
+            institution: coordinator.institution
+          }
+        : null
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="acceptance-letter-${student.firstName}-${student.lastName}.pdf"`
+    );
+    res.send(pdfBuffer);
   } catch (error) {
     next(error);
   }

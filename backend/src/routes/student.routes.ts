@@ -15,7 +15,9 @@ import {
   updatePreferences,
   updateProfile,
   uploadResume,
-  withdrawApplication
+  withdrawApplication,
+  downloadLogbookPDF,
+  downloadAcceptanceLetter
 } from "../controllers/student.controller";
 import {
   createLogbookEntry,
@@ -48,7 +50,10 @@ studentRouter.get("/dashboard/stats", getDashboardStats);
 
 studentRouter.get("/logbook", getMyLogbook);
 studentRouter.post("/logbook", createLogbookEntry);
+studentRouter.get("/logbook/download", downloadLogbookPDF);
 studentRouter.get("/logbook/:id", getLogbookEntryById);
 studentRouter.put("/logbook/:id", updateLogbookEntry);
 studentRouter.delete("/logbook/:id", deleteLogbookEntry);
 studentRouter.patch("/logbook/:id/submit", submitLogbook);
+
+studentRouter.get("/applications/:id/acceptance-letter", downloadAcceptanceLetter);

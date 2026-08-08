@@ -105,6 +105,11 @@ export type StudentProfile = {
   cgpa?: number | null;
   currentState: string;
   preferredStates: string[];
+  institution?: {
+    id: string;
+    name: string;
+    shortName: string;
+  } | null;
 };
 
 export type OrganizationProfile = {
@@ -157,6 +162,12 @@ export type LogbookEntry = {
   activity: string;
   description: string;
   supervisorComment?: string | null;
+  organizationComment?: string | null;
+  organizationSignature?: string | null;
+  organizationReviewedAt?: string | null;
+  coordinatorComment?: string | null;
+  coordinatorSignature?: string | null;
+  coordinatorReviewedAt?: string | null;
   status: "DRAFT" | "SUBMITTED";
   createdAt: string;
   updatedAt: string;

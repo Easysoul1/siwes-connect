@@ -19,6 +19,11 @@ import {
   updatePlacementStatus,
   uploadOrganizationDocuments
 } from "../controllers/organization.controller";
+import {
+  getOrgStudents,
+  getStudentLogbook,
+  addOrgComment
+} from "../controllers/org-logbook.controller";
 
 export const organizationRouter = Router();
 
@@ -45,3 +50,7 @@ organizationRouter.patch("/applications/:id/status", updateApplicationStatus);
 organizationRouter.post("/applications/:id/confirm", confirmPlacement);
 
 organizationRouter.get("/dashboard/stats", getOrganizationDashboardStats);
+
+organizationRouter.get("/students", getOrgStudents);
+organizationRouter.get("/students/:studentId/logbook", getStudentLogbook);
+organizationRouter.patch("/logbook/:entryId/comment", addOrgComment);

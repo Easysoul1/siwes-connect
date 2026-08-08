@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
 import { registerCoordinator } from "@/lib/api";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { NIGERIAN_INSTITUTIONS } from "@/shared/constants/institutions";
 
 export default function CoordinatorRegisterPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function CoordinatorRegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [inviteCode, setInviteCode] = useState("");
+  const [institution, setInstitution] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -22,7 +24,7 @@ export default function CoordinatorRegisterPage() {
 
     startTransition(async () => {
       try {
-        const session = await registerCoordinator({ fullName, email, password, inviteCode });
+        const session = await registerCoordinator({ fullName, email, password, inviteCode, institutionId: institution || undefined });
         setSession(session);
         router.push("/coordinator/dashboard");
       } catch (error) {
@@ -78,6 +80,22 @@ export default function CoordinatorRegisterPage() {
               onChange={(event) => setInviteCode(event.target.value)}
               required
             />
+          </div>
+          <div>
+            <label className="label">Institution</label>
+            <select
+              className="select"
+              value={institution}
+              onChange={(event) => setInstitution(event.target.value)}
+              required
+            >
+              <option value="">Select institution</option>
+              {NIGERIAN_INSTITUTIONS.map((inst) => (
+                <option key={inst.shortName} value={inst.shortName}>
+                  {inst.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <button className="btn btn-primary" type="submit" disabled={isPending}>

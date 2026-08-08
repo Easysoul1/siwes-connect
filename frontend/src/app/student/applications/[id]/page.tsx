@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { getStudentApplicationById } from "@/lib/api";
+import { getStudentApplicationById, downloadAcceptanceLetter } from "@/lib/api";
 import { ApplicationItem } from "@/lib/types";
 
 export default function StudentApplicationDetailPage() {
@@ -13,6 +13,7 @@ export default function StudentApplicationDetailPage() {
   const [application, setApplication] = useState<ApplicationItem | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [downloadingLetter, setDownloadingLetter] = useState(false);
 
   useEffect(() => {
     if (!params?.id || !session?.accessToken) return;
@@ -29,6 +30,26 @@ export default function StudentApplicationDetailPage() {
 
   const steps = ["SUBMITTED", "UNDER_REVIEW", "ACCEPTED", "PLACEMENT_CONFIRMED"];
   const currentStep = application ? steps.indexOf(application.status) : -1;
+
+  async function handleDownloadLetter() {
+    if (!session?.accessToken || !params?.id) return;
+    setDownloadingLetter(true);
+    try {
+      const blob = await downloadAcceptanceLetter(session.accessToken, params.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "acceptance-letter.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : "Failed to download letter");
+    } finally {
+      setDownloadingLetter(false);
+    }
+  }
 
   return (
     <main className="app-container" style={{ paddingBottom: "2rem" }}>
@@ -74,6 +95,22 @@ export default function StudentApplicationDetailPage() {
               ) : null}
             </div>
           </section>
+
+          {(application.status === "ACCEPTED" || application.status === "PLACEMENT_CONFIRMED") && (
+            <section className="card" style={{ marginBottom: "0.8rem" }}>
+              <h3 style={{ marginTop: 0 }}>Acceptance Letter</h3>
+              <p style={{ margin: "0 0 0.8rem", color: "#4B5563", fontSize: 14 }}>
+                Download your official acceptance letter for this placement.
+              </p>
+              <button
+                className="btn btn-primary"
+                onClick={handleDownloadLetter}
+                disabled={downloadingLetter}
+              >
+                {downloadingLetter ? "Generating..." : "Download Acceptance Letter"}
+              </button>
+            </section>
+          )}
 
           <section className="card">
             <h3 style={{ marginTop: 0 }}>Application Summary</h3>
