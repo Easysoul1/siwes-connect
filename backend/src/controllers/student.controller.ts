@@ -33,7 +33,10 @@ const applySchema = z.object({
 async function getStudentByUserId(userId: string) {
   const student = await prisma.student.findUnique({
     where: { userId },
-    include: { user: { select: { id: true, email: true, role: true } } }
+    include: {
+      user: { select: { id: true, email: true, role: true } },
+      institution: { select: { name: true, shortName: true } }
+    }
   });
 
   if (!student) throw new AppError(404, "Student profile not found");

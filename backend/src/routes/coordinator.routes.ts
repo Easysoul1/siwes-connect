@@ -72,6 +72,10 @@ coordinatorRouter.get("/applications/:id/acceptance-letter", async (req, res, ne
       return res.status(400).json({ status: "error", message: "Application not accepted yet" });
     }
 
+    if (!application.organization || !application.placement) {
+      return res.status(400).json({ status: "error", message: "Incomplete application data" });
+    }
+
     let coordinator = null;
     if (application.student?.institutionId) {
       coordinator = await prisma.coordinator.findFirst({

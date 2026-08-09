@@ -238,7 +238,7 @@ export async function updateStudentProfile(
       StudentProfile,
       "firstName" | "lastName" | "department" | "level" | "cgpa" | "currentState"
     >
-  >
+  > & { institutionId?: string }
 ) {
   return authRequest<{ message: string }>("/students/profile", token, {
     method: "PUT",
